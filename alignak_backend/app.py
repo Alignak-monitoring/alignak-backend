@@ -229,6 +229,43 @@ def pre_get(resource, user_request, lookup):
                                        {'_realm': {'$in': resources_get_custom[resource]}}]}]
 
 
+# Hosts / services
+def on_return_host(response):
+    """
+    Hook before getting some hosts
+
+    :param items: realm fields
+    :type items: dict
+    :return: None
+    """
+    if '_items' in response:
+        ls_drv = current_app.data.driver.db['livestate']
+        for item in response['_items']:
+            ls = ls_drv.find_one({'host': item['_id']})
+            if not ls:
+                continue
+
+            item['livestate'] = ls
+
+
+def on_return_service(response):
+    """
+    Hook before getting some hosts
+
+    :param items: realm fields
+    :type items: dict
+    :return: None
+    """
+    if '_items' in response:
+        ls_drv = current_app.data.driver.db['livestate']
+        for item in response['_items']:
+            ls = ls_drv.find_one({'service': item['_id']})
+            if not ls:
+                continue
+
+            item['livestate'] = ls
+
+
 # Log checks results
 def pre_logcheckresult_post(items):
     """
@@ -1092,6 +1129,8 @@ with app.test_request_context():
                                "service_notification_period": always['_id'],
                                "_realm": default_realm['_id'], "_sub_realm": True})
         print("Created super admin user")
+
+    # Livestate management
     app.on_updated_livestate += Livesynthesis.on_updated_livestate
     app.on_inserted_livestate += Livesynthesis.on_inserted_livestate
     app.on_inserted_host += Livestate.on_inserted_host
@@ -1142,6 +1181,9 @@ app.on_inserted_logcheckresult += after_insert_logcheckresult
 
 with app.test_request_context():
     app.on_inserted_logcheckresult += Timeseries.after_inserted_logcheckresult
+
+app.on_fetched_resource_host += on_return_host
+app.on_fetched_resource_service += on_return_service
 
 # Start scheduler (internal cron)
 if len(settings['JOBS']) > 0:

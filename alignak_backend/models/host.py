@@ -19,6 +19,10 @@ def get_schema():
     """
     Schema structure of this resource
 
+    When getting this resource in the backend, the application tries to find an associated
+    livestate item. If one is found, all the fields (except special ones) of the found livestate
+    are returned with this model fields.
+
     :return: schema dictionary
     :rtype: dict
     """
