@@ -19,6 +19,14 @@ def get_schema():
     """
     Schema structure of this resource
 
+    host/service define the concerned host/service for this history event. If the service is null
+    then the vent is an host event. When posting an history the backend will value the host_name
+    and service_name fields automatically, this to keep human readable information even when the
+    host/service do not exist anymore in the backend or if host/service _id got changed (host
+    delated and re-created).
+
+    The type field defines the event type (see the type definition for the allowed events)
+
     :return: schema dictionary
     :rtype: dict
     """
@@ -30,7 +38,11 @@ def get_schema():
                     'resource': 'host',
                     'embeddable': True
                 },
-                'required': True,
+                'nullable': True
+            },
+            'host_name': {
+                'type': 'string',
+                'regex': '^[^`~!$%^&*"|\'<>?,()=]+$'
             },
             'service': {
                 'type': 'objectid',
@@ -38,8 +50,11 @@ def get_schema():
                     'resource': 'service',
                     'embeddable': True
                 },
-                'required': True,
                 'nullable': True
+            },
+            'service_name': {
+                'type': 'string',
+                'regex': '^[^`~!$%^&*"|\'<>?,()=]+$'
             },
             'user': {
                 'type': 'objectid',
@@ -48,6 +63,10 @@ def get_schema():
                     'embeddable': True
                 },
                 'nullable': True
+            },
+            'user_name': {
+                'type': 'string',
+                'regex': '^[^`~!$%^&*"|\'<>?,()=]+$'
             },
             'type': {
                 'type': 'string',
@@ -76,6 +95,24 @@ def get_schema():
                     "downtime.processed",
                     # Delete downtime
                     "downtime.delete"
+
+                    # timeperiod transition
+                    "monitoring.timeperiod_transition",
+                    # alert
+                    "monitoring.alert",
+                    # event handler
+                    "monitoring.event_handler",
+                    # flapping start / stop
+                    "monitoring.flapping_start",
+                    "monitoring.flapping_stop",
+                    # downtime start / cancel / end
+                    "monitoring.downtime_start",
+                    "monitoring.downtime_cancelled",
+                    "monitoring.downtime_end",
+                    # acknowledge
+                    "monitoring.acknowledge",
+                    # notification
+                    "monitoring.notification",
                 ],
                 'default': 'check.result'
             },
@@ -97,7 +134,6 @@ def get_schema():
                     'resource': 'realm',
                     'embeddable': True
                 },
-                'required': True,
             },
             '_sub_realm': {
                 'type': 'boolean',

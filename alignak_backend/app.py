@@ -228,20 +228,87 @@ def pre_get(resource, user_request, lookup):
                                        {'_realm': {'$in': resources_get_custom[resource]}}]}]
 
 
+# History
+def pre_history_post(items):
+    """
+    Hook before adding new history element
+
+    If host _id is not provided, search for an host with host_name. Same for service and user.
+
+    :param items: history fields
+    :type items: dict
+    :return: None
+    """
+    hosts_drv = current_app.data.driver.db['host']
+    services_drv = current_app.data.driver.db['service']
+    users_drv = current_app.data.driver.db['user']
+    for dummy, item in enumerate(items):
+        if 'host' in item and item['host']:
+            host = hosts_drv.find_one({'_id': item['host']})
+            if host:
+                item['host_name'] = host['name']
+            else:
+                continue
+        elif 'host_name' in item and item['host_name']:
+            host = hosts_drv.find_one({'name': item['host_name']})
+            if host:
+                item['host'] = host['_id']
+            else:
+                continue
+        else:
+            continue
+
+        host = hosts_drv.find_one({'_id': item['host']})
+        # Set _realm as host's _realm
+        item['_realm'] = host['_realm']
+
+        # Find service and service_name
+        if 'service' in item and item['service']:
+            service = services_drv.find_one({'_id': item['service']})
+            if service:
+                item['service_name'] = service['name']
+        elif 'service_name' in item and item['service_name']:
+            service = services_drv.find_one({'host': item['host'], 'name': item['service_name']})
+            if service:
+                item['service'] = service['_id']
+
+        # Find user and user_name
+        if 'user' in item and item['user']:
+            user = users_drv.find_one({'_id': item['user']})
+            if user:
+                item['user_name'] = user['name']
+        elif 'user_name' in item and item['user_name']:
+            user = users_drv.find_one({'name': item['user_name']})
+            if user:
+                item['user'] = user['_id']
+        else:
+            item['user_name'] = 'Alignak'
+            item['user'] = None
+
+
 # Log checks results
 def pre_logcheckresult_post(items):
     """
     Hook before adding new forcecheck
 
-    :param items: realm fields
+    :param items: logcheckresult fields
     :type items: dict
     :return: None
     """
     hosts_drv = current_app.data.driver.db['host']
+    services_drv = current_app.data.driver.db['service']
     for dummy, item in enumerate(items):
         # Set _realm as host's _realm
         host = hosts_drv.find_one({'_id': item['host']})
         item['_realm'] = host['_realm']
+        item['host_name'] = host['name']
+
+        # Find service_name
+        if item['service'] and 'service_name' not in item:
+            service = services_drv.find_one({'_id': item['service']})
+            item['service_name'] = service['name']
+        else:
+            item['service_name'] = ''
 
 
 def after_insert_logcheckresult(items):
@@ -256,7 +323,9 @@ def after_insert_logcheckresult(items):
         # Create an history event for the new forcecheck
         data = {
             'host': item['host'],
+            'host_name': item['host_name'],
             'service': item['service'],
+            'service_name': item['service_name'],
             'user': None,
             'type': 'check.result',
             'message': '',
@@ -270,7 +339,7 @@ def pre_actionacknowledge_post(items):
     """
     Hook before adding new acknowledge
 
-    :param items: realm fields
+    :param items: actionacknowledge fields
     :type items: dict
     :return: None
     """
@@ -289,11 +358,22 @@ def after_insert_actionacknowledge(items):
     :type items: dict
     :return: None
     """
+    hosts_drv = current_app.data.driver.db['host']
+    services_drv = current_app.data.driver.db['service']
     for dummy, item in enumerate(items):
+        # Get concerned host
+        host = hosts_drv.find_one({'_id': item['host']})
+        service_name = ''
+        if item['service']:
+            service = services_drv.find_one({'_id': item['service']})
+            service_name = service['name']
+
         # Create an history event for the new acknowledge
         data = {
             'host': item['host'],
+            'host_name': host['name'],
             'service': item['service'],
+            'service_name': service_name,
             'user': item['user'],
             'type': 'ack.' + item['action'],
             'message': item['comment']
@@ -312,10 +392,22 @@ def after_update_actionacknowledge(updated, original):
     :return: None
     """
     if 'processed' in updated and updated['processed']:
-        # Create an history event for the new acknowledge
+        hosts_drv = current_app.data.driver.db['host']
+        services_drv = current_app.data.driver.db['service']
+
+        # Get concerned host
+        host = hosts_drv.find_one({'_id': original['host']})
+        service_name = ''
+        if original['service']:
+            service = services_drv.find_one({'_id': original['service']})
+            service_name = service['name']
+
+        # Create an history event for the changed acknowledge
         data = {
             'host': original['host'],
+            'host_name': host['name'],
             'service': original['service'],
+            'service_name': service_name,
             'user': original['user'],
             'type': 'ack.processed',
             'message': original['comment'],
@@ -330,7 +422,7 @@ def pre_actiondowntime_post(items):
     """
     Hook before adding new downtime
 
-    :param items: realm fields
+    :param items: actiondowntime fields
     :type items: dict
     :return: None
     """
@@ -349,11 +441,22 @@ def after_insert_actiondowntime(items):
     :type items: dict
     :return: None
     """
+    hosts_drv = current_app.data.driver.db['host']
+    services_drv = current_app.data.driver.db['service']
     for dummy, item in enumerate(items):
+        # Get concerned host
+        host = hosts_drv.find_one({'_id': item['host']})
+        service_name = ''
+        if item['service']:
+            service = services_drv.find_one({'_id': item['service']})
+            service_name = service['name']
+
         # Create an history event for the new downtime
         data = {
             'host': item['host'],
+            'host_name': host['name'],
             'service': item['service'],
+            'service_name': service_name,
             'user': item['user'],
             'type': 'downtime.' + item['action'],
             'message': item['comment']
@@ -372,10 +475,22 @@ def after_update_actiondowntime(updated, original):
     :return: None
     """
     if 'processed' in updated and updated['processed']:
-        # Create an history event for the new downtime
+        hosts_drv = current_app.data.driver.db['host']
+        services_drv = current_app.data.driver.db['service']
+
+        # Get concerned host
+        host = hosts_drv.find_one({'_id': original['host']})
+        service_name = ''
+        if original['service']:
+            service = services_drv.find_one({'_id': original['service']})
+            service_name = service['name']
+
+        # Create an history event for the changed downtime
         data = {
             'host': original['host'],
+            'host_name': host['name'],
             'service': original['service'],
+            'service_name': service_name,
             'user': original['user'],
             'type': 'downtime.processed',
             'message': original['comment'],
@@ -390,7 +505,7 @@ def pre_actionforcecheck_post(items):
     """
     Hook before adding new forcecheck
 
-    :param items: realm fields
+    :param items: actionforcecheck fields
     :type items: dict
     :return: None
     """
@@ -409,11 +524,22 @@ def after_insert_actionforcecheck(items):
     :type items: dict
     :return: None
     """
+    hosts_drv = current_app.data.driver.db['host']
+    services_drv = current_app.data.driver.db['service']
     for dummy, item in enumerate(items):
+        # Get concerned host
+        host = hosts_drv.find_one({'_id': item['host']})
+        service_name = ''
+        if item['service']:
+            service = services_drv.find_one({'_id': item['service']})
+            service_name = service['name']
+
         # Create an history event for the new forcecheck
         data = {
             'host': item['host'],
+            'host_name': host['name'],
             'service': item['service'],
+            'service_name': service_name,
             'user': item['user'],
             'type': 'check.request',
             'message': item['comment']
@@ -433,10 +559,22 @@ def after_update_actionforcecheck(updated, original):
     :return: None
     """
     if 'processed' in updated and updated['processed']:
-        # Create an history event for the new forcecheck
+        hosts_drv = current_app.data.driver.db['host']
+        services_drv = current_app.data.driver.db['service']
+
+        # Get concerned host
+        host = hosts_drv.find_one({'_id': original['host']})
+        service_name = ''
+        if original['service']:
+            service = services_drv.find_one({'_id': original['service']})
+            service_name = service['name']
+
+        # Create an history event for the changed forcecheck
         data = {
             'host': original['host'],
+            'host_name': host['name'],
             'service': original['service'],
+            'service_name': service_name,
             'user': original['user'],
             'type': 'check.requested',
             'message': original['comment'],
@@ -1204,6 +1342,8 @@ app.on_updated_actiondowntime += after_update_actiondowntime
 app.on_insert_actionforcecheck += pre_actionforcecheck_post
 app.on_inserted_actionforcecheck += after_insert_actionforcecheck
 app.on_updated_actionforcecheck += after_update_actionforcecheck
+
+app.on_insert_history += pre_history_post
 
 app.on_insert_logcheckresult += pre_logcheckresult_post
 app.on_inserted_logcheckresult += after_insert_logcheckresult

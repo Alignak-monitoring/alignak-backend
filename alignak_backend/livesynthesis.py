@@ -45,6 +45,8 @@ class Livesynthesis(object):
                     'services_warning_soft': 0,
                     'services_critical_hard': 0,
                     'services_critical_soft': 0,
+                    'services_unreachable_hard': 0,
+                    'services_unreachable_soft': 0,
                     'services_unknown_hard': 0,
                     'services_unknown_soft': 0,
                     'services_acknowledged': 0,
@@ -131,6 +133,11 @@ class Livesynthesis(object):
                     "ls_state": "UNKNOWN", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
+                data['services_unreachable_hard'] = services.find({
+                    '_is_template': False,
+                    "ls_state": "UNREACHABLE", "ls_state_type": "HARD",
+                    "ls_acknowledged": False, "_realm": realm["_id"]
+                }).count()
 
                 data['services_ok_soft'] = services.find({
                     '_is_template': False,
@@ -150,6 +157,11 @@ class Livesynthesis(object):
                 data['services_unknown_soft'] = services.find({
                     '_is_template': False,
                     "ls_state": "UNKNOWN", "ls_state_type": "SOFT",
+                    "ls_acknowledged": False, "_realm": realm["_id"]
+                }).count()
+                data['services_unreachable_soft'] = services.find({
+                    '_is_template': False,
+                    "ls_state": "UNREACHABLE", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
 

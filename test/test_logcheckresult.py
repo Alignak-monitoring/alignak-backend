@@ -148,20 +148,22 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 0)
 
-        # Get host in the backend
-        response = requests.get(self.endpoint + '/host', auth=self.auth)
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(rh[0]['name'], "srv001")
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
 
         # Get service in the backend
-        response = requests.get(self.endpoint + '/service', auth=self.auth)
+        response = requests.get(self.endpoint + '/service', params={'sort': 'name'}, auth=self.auth)
         resp = response.json()
         rs = resp['_items']
         self.assertEqual(rs[0]['name'], "ping")
 
         # -------------------------------------------
-        # Add a check result
+        # Add a check result for an host
         data = {
             "last_check": timegm(datetime.utcnow().timetuple()),
             "host": rh[0]['_id'],
@@ -192,13 +194,17 @@ class TestActions(unittest2.TestCase):
             self.endpoint + '/logcheckresult', params=sort_id, auth=self.auth
         )
         resp = response.json()
-        re = resp['_items']
-        self.assertEqual(len(re), 1)
-        re = resp['_items']
-        check_id = re[0]['_id']
+        rl = resp['_items']
+        self.assertEqual(len(rl), 1)
+        rl = resp['_items']
+        check_id = rl[0]['_id']
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
-        self.assertEqual(re[0]['output'], 'Check output')
+        # Host / service ids and names are correct
+        self.assertEqual(rl[0]['host'], rh[0]['_id'])
+        self.assertEqual(rl[0]['host_name'], rh[0]['name'])
+        self.assertEqual(rl[0]['service'], None)
+        self.assertEqual(rl[0]['service_name'], '')
+        self.assertEqual(rl[0]['output'], 'Check output')
 
         # Get history
         response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
@@ -206,8 +212,70 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 1)
 
+        # Host / service ids and names are correct
         self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[0]['name'])
         self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['service_name'], '')
         self.assertEqual(re[0]['type'], "check.result")
         self.assertEqual(re[0]['message'], "")
         self.assertEqual(re[0]['logcheckresult'], check_id)
+
+        # -------------------------------------------
+        # Add a check result for a service
+        data = {
+            "last_check": timegm(datetime.utcnow().timetuple()),
+            "host": rh[1]['_id'],
+            "service": rs[0]['_id'],
+            'acknowledged': False,
+            'state_id': 0,
+            'state': 'UP',
+            'state_type': 'HARD',
+            'last_state_id': 0,
+            'last_state': 'UP',
+            'last_state_type': 'HARD',
+            'state_changed': False,
+            'latency': 0,
+            'execution_time': 0.12,
+            'output': 'Check output',
+            'long_output': 'Check long_output',
+            'perf_data': 'perf_data',
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/logcheckresult', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+        self.assertEqual(resp['_status'], 'OK')
+
+        # Get check results
+        response = requests.get(
+            self.endpoint + '/logcheckresult', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        rl = resp['_items']
+        self.assertEqual(len(rl), 2)
+        rl = resp['_items']
+        check_id = rl[1]['_id']
+
+        # Host / service ids and names are correct
+        self.assertEqual(rl[1]['host'], rh[1]['_id'])
+        self.assertEqual(rl[1]['host_name'], rh[1]['name'])
+        self.assertEqual(rl[1]['service'], rs[0]['_id'])
+        self.assertEqual(rl[1]['service_name'], rs[0]['name'])
+        self.assertEqual(rl[1]['output'], 'Check output')
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 2)
+
+        # Host / service ids and names are correct
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
+        self.assertEqual(re[1]['service'], rs[0]['_id'])
+        self.assertEqual(re[1]['service_name'], rs[0]['name'])
+        self.assertEqual(re[1]['type'], "check.result")
+        self.assertEqual(re[1]['message'], "")
+        self.assertEqual(re[1]['logcheckresult'], check_id)
