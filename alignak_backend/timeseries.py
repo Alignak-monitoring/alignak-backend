@@ -154,12 +154,15 @@ class Timeseries(object):
         if host == '':
             return True
         port = current_app.config.get('CARBON_PORT')
+        cprefix = current_app.config.get('CARBON_PREFIX')
         send_data = []
         for d in data:
             if d['service'] == '':
                 prefix = '.'.join([d['realm'], d['host']])
             else:
                 prefix = '.'.join([d['realm'], d['host'], d['service']])
+            if cprefix is not "":
+                prefix = '.'.join([cprefix, prefix])
             send_data.append(('.'.join([prefix, d['name']]),
                               (int(d['timestamp']), d['value'])))
         carbon = CarbonIface(host, port)

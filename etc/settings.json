@@ -26,6 +26,7 @@
   "GRAPHITE_PORT": 8080,  /* Port of Graphite */
   "CARBON_HOST": null,  /* Carbon for metrics, to disable it, use: null */
   "CARBON_PORT": 2004,  /* Port of Carbon */
+  "CARBON_PREFIX": "",  /* Prefix of Carbon */
 
   "INFLUXDB_HOST": null,          /* Influxdb for metrics, to disable it, use: null */
   "INFLUXDB_PORT": 8086,          /* Port of Influxdb */
