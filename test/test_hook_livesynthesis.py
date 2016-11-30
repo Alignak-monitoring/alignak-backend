@@ -138,6 +138,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -164,31 +166,11 @@ class TestHookLivesynthesis(unittest2.TestCase):
             del data['realm']
         data['_realm'] = self.realm_all
         requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
-        # Check if livesynthesis right created
+        # No livesynthesis should be created for an host template
         response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
         resp = response.json()
         r = resp['_items']
-        self.assertEqual(len(r), 1)
-        self.assertEqual(r[0]['hosts_total'], 0)
-        self.assertEqual(r[0]['hosts_up_hard'], 0)
-        self.assertEqual(r[0]['hosts_up_soft'], 0)
-        self.assertEqual(r[0]['hosts_down_hard'], 0)
-        self.assertEqual(r[0]['hosts_down_soft'], 0)
-        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
-        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
-        self.assertEqual(r[0]['hosts_acknowledged'], 0)
-        self.assertEqual(r[0]['hosts_in_downtime'], 0)
-        self.assertEqual(r[0]['services_total'], 0)
-        self.assertEqual(r[0]['services_ok_hard'], 0)
-        self.assertEqual(r[0]['services_ok_soft'], 0)
-        self.assertEqual(r[0]['services_warning_hard'], 0)
-        self.assertEqual(r[0]['services_warning_soft'], 0)
-        self.assertEqual(r[0]['services_critical_hard'], 0)
-        self.assertEqual(r[0]['services_critical_soft'], 0)
-        self.assertEqual(r[0]['services_unknown_hard'], 0)
-        self.assertEqual(r[0]['services_unknown_soft'], 0)
-        self.assertEqual(r[0]['services_acknowledged'], 0)
-        self.assertEqual(r[0]['services_in_downtime'], 0)
+        self.assertEqual(len(r), 0)
 
     def test_add_service(self):
         """
@@ -248,6 +230,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -316,6 +300,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -392,6 +378,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -446,6 +434,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -500,6 +490,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -554,6 +546,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -608,6 +602,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -663,6 +659,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -718,6 +716,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -786,6 +786,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -861,6 +863,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 1)
         self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -914,6 +918,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -967,6 +973,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -1020,6 +1028,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 1)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -1073,6 +1083,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -1128,6 +1140,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 1)
 
@@ -1183,6 +1197,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
@@ -1365,6 +1381,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
             self.assertEqual(r[index]['services_critical_soft'], 0)
             self.assertEqual(r[index]['services_unknown_hard'], 1)
             self.assertEqual(r[index]['services_unknown_soft'], 0)
+            self.assertEqual(r[index]['services_unreachable_hard'], 0)
+            self.assertEqual(r[index]['services_unreachable_soft'], 0)
 
         # update livestate host srv001_realmallA down
         # => DOWN SOFT
@@ -1429,6 +1447,8 @@ class TestHookLivesynthesis(unittest2.TestCase):
                 self.assertEqual(ls['services_critical_soft'], 0)
                 self.assertEqual(ls['services_unknown_hard'], 1)
                 self.assertEqual(ls['services_unknown_soft'], 0)
+                self.assertEqual(ls['services_unreachable_hard'], 0)
+                self.assertEqual(ls['services_unreachable_soft'], 0)
             else:
                 self.assertEqual(ls['hosts_total'], 1)
                 self.assertEqual(ls['hosts_up_hard'], 0)
@@ -1447,3 +1467,5 @@ class TestHookLivesynthesis(unittest2.TestCase):
                 self.assertEqual(ls['services_critical_soft'], 0)
                 self.assertEqual(ls['services_unknown_hard'], 1)
                 self.assertEqual(ls['services_unknown_soft'], 0)
+                self.assertEqual(ls['services_unreachable_hard'], 0)
+                self.assertEqual(ls['services_unreachable_soft'], 0)

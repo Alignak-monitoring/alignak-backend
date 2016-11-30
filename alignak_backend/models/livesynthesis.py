@@ -112,6 +112,14 @@ def get_schema():
                 'type': 'integer',
                 'default': 0,
             },
+            'services_unreachable_hard': {
+                'type': 'integer',
+                'default': 0,
+            },
+            'services_unreachable_soft': {
+                'type': 'integer',
+                'default': 0,
+            },
             'services_acknowledged': {
                 'type': 'integer',
                 'default': 0
