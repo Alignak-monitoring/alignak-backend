@@ -35,23 +35,25 @@ class Timeseries(object):
         for dummy, item in enumerate(items):
             ts = Timeseries.prepare_data(item)
             host_info = host_db.find_one({'_id': item['host']})
+            item_realm = host_info['_realm']
             service = ''
             if item['service'] is not None:
                 service_info = service_db.find_one({'_id': item['service']})
                 service = service_info['name']
+                item_realm = service_info['_realm']
             send_data = []
             for d in ts['data']:
                 send_data.append(
                     {
-                        "name": d['value']['name'],
+                        "name": d['name'],
                         "realm": Timeseries.get_realms_prefix(item['_realm']),
                         "host": host_info['name'],
                         "service": service,
-                        "value": d['value']['value'],
+                        "value": int(round(d['value'])),
                         "timestamp": item['last_check']
                     }
                 )
-            Timeseries.send_to_timeseries_db(send_data)
+            Timeseries.send_to_timeseries_db(send_data, item_realm)
 
     @staticmethod
     def prepare_data(item):
@@ -78,7 +80,21 @@ class Timeseries(object):
                 data_timeseries['data'].append(
                     {
                         'name': fields['name'],
-                        'value': fields
+                        'value': fields['value']
+                    }
+                )
+            if fields['warning'] is not None:
+                data_timeseries['data'].append(
+                    {
+                        'name': fields['name'] + '_warning',
+                        'value': fields['warning']
+                    }
+                )
+            if fields['critical'] is not None:
+                data_timeseries['data'].append(
+                    {
+                        'name': fields['name'] + '_critical',
+                        'value': fields['critical']
                     }
                 )
         return data_timeseries
@@ -104,7 +120,7 @@ class Timeseries(object):
         return prefix_realm
 
     @staticmethod
-    def send_to_timeseries_db(data):
+    def send_to_timeseries_db(data, item_realm):
         """
         Send perfdata to timeseries databases, if not available, add temporary in mongo (retention)
 
@@ -122,47 +138,65 @@ class Timeseries(object):
 
         :param data: Information of data to send to carbon / influxdb
         :type data: list
+        :param item_realm: id of the realm
+        :type item_realm: str
         :return: None
         """
-        to_graphite_cache = False
-        to_influx_cache = False
+        graphite_db = current_app.data.driver.db['graphite']
+        influxdb_db = current_app.data.driver.db['influxdb']
+        realm_db = current_app.data.driver.db['realm']
 
-        if not Timeseries.send_to_timeseries_graphite(data):
-            to_graphite_cache = True
+        searches = [{'_realm': item_realm}]
+        realm_info = realm_db.find_one({'_id': item_realm})
+        for realm in realm_info['_tree_parents']:
+            searches.append({'_realm': realm, '_sub_realm': True})
 
-        if not Timeseries.send_to_timeseries_influxdb(data):
-            to_influx_cache = True
+        # get graphite servers to send
+        for search in searches:
+            graphites = graphite_db.find(search)
+            for graphite in graphites:
+                if not Timeseries.send_to_timeseries_graphite(data, graphite):
+                    for perf in data:
+                        perf['graphite'] = graphite['_id']
+                    post_internal('timeseriesretention', data)
+                    for perf in data:
+                        del perf['graphite']
 
-        if to_graphite_cache or to_influx_cache:
-            for d in data:
-                d['for_graphite'] = to_graphite_cache
-                d['for_influxdb'] = to_influx_cache
-            if len(data) > 0:
-                post_internal('timeseriesretention', data)
+        # get influxdb servers to send
+        for search in searches:
+            influxdbs = influxdb_db.find(search)
+            for influxdb in influxdbs:
+                if not Timeseries.send_to_timeseries_influxdb(data, influxdb):
+                    for perf in data:
+                        perf['influxdb'] = influxdb['_id']
+                    post_internal('timeseriesretention', data)
+                    for perf in data:
+                        del perf['influxdb']
 
     @staticmethod
-    def send_to_timeseries_graphite(data):
+    def send_to_timeseries_graphite(data, graphite):
         """
         Send perfdata to graphite/carbon timeseries database
 
         :param data: list of perfdata to send to graphite / carbon
         :type data: list
+        :param graphite: graphite properties dictionary
+        :type graphite: dict
         :return: True if successful or not have graphite configured, otherwise False
         :rtype: bool
         """
-        host = current_app.config.get('CARBON_HOST')
-        if host == '':
-            return True
-        port = current_app.config.get('CARBON_PORT')
         send_data = []
         for d in data:
             if d['service'] == '':
                 prefix = '.'.join([d['realm'], d['host']])
             else:
                 prefix = '.'.join([d['realm'], d['host'], d['service']])
+            # manage prefix of graphite server
+            if graphite['prefix'] != '':
+                prefix = graphite['prefix'] + prefix
             send_data.append(('.'.join([prefix, d['name']]),
                               (int(d['timestamp']), d['value'])))
-        carbon = CarbonIface(host, port)
+        carbon = CarbonIface(graphite['carbon_address'], graphite['carbon_port'])
         try:
             carbon.send_data(send_data)
             return True
@@ -170,22 +204,17 @@ class Timeseries(object):
             return False
 
     @staticmethod
-    def send_to_timeseries_influxdb(data):
+    def send_to_timeseries_influxdb(data, influxdb):
         """
         Send perfdata to influxdb timeseries database
 
         :param data: list of perfdata to send to influxdb
         :type data: list
+        :param influxdb: influxdb properties dictionary
+        :type influxdb: dict
         :return: True if successful or not have influxdb configured, otherwise False
         :rtype: bool
         """
-        host = current_app.config.get('INFLUXDB_HOST')
-        if host == '':
-            return True
-        port = current_app.config.get('INFLUXDB_PORT')
-        login = current_app.config.get('INFLUXDB_LOGIN')
-        password = current_app.config.get('INFLUXDB_PASSWORD')
-        database = current_app.config.get('INFLUXDB_DATABASE')
         json_body = []
         for d in data:
             json_body.append({
@@ -200,9 +229,10 @@ class Timeseries(object):
                     "value": float(d['value'])
                 }
             })
-        influxdb = InfluxDBClient(host, port, login, password, database)
+        influxdbs = InfluxDBClient(influxdb['address'], influxdb['port'], influxdb['login'],
+                                   influxdb['password'], influxdb['database'], timeout=1)
         try:
-            influxdb.write_points(json_body)
+            influxdbs.write_points(json_body)
             return True
         except:  # pylint: disable=W0702
             return False

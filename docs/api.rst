@@ -380,6 +380,122 @@ We have now::
 
 
 
+Timeseries databases
+--------------------
+
+To store the metrics, we need to configure Carbon/Graphite or/and InfluxDB.
+
+These timeseries interfaces can be defined by realm + sub realm, and so you can have multiple
+timeseries database in a realm.
+
+For Carbon/Graphite, use resource _graphite_, composed with information:
+
+* *carbon_address*: address of carbon (IP, DNS),
+* *carbon_port*: port of carbon, default 2004,
+* *graphite_address*: address of graphite (IP, DNS),
+* *graphite_port*: port of graphite, default 8080,
+* *prefix*: a prefix to use in carbon for our data
+* *grafana*: id of grafana
+
+Curl example::
+
+    curl -X POST -H "Content-Type: application/json"
+    -H "Authorization: Basic MTQ3NjU2NDExMDA0MS1kN2FlNDYwZi1mZWQ3LTQ5YjQtYWMwZS04NTRlNGU0ODhmOWU6"
+    -H "Cache-Control: no-cache" -d '[
+	{
+        "name": "graphite_001",
+        "carbon_address": "192.168.0.200",
+        "carbon_port": 2004,
+        "graphite_address": "192.168.0.200",
+        "graphite_port": 8080,
+        "prefix": "001.a",
+        "grafana": "5864c1c98bde9c8bd787a779",
+        "_realm": "5864c1c98bde9c8bd787a781",
+        "_sub_realm": true
+	}
+    ]' "http://192.168.0.10:5000/graphite"
+
+
+For InfluxDB, use resource _influxdb_:
+
+* *address*: address of influxdb (IP, DNS),
+* *port*: port of influxdb, default 8086,
+* *database*: database name in influxdb
+* *login*: login to access to influxdb
+* *password*: password to access to influxdb
+* *grafana*: id of grafana
+
+Curl example::
+
+    curl -X POST -H "Content-Type: application/json"
+    -H "Authorization: Basic MTQ3NjU2NDExMDA0MS1kN2FlNDYwZi1mZWQ3LTQ5YjQtYWMwZS04NTRlNGU0ODhmOWU6"
+    -H "Cache-Control: no-cache" -d '[
+	{
+        "name": "influx_001",
+        "address": "192.168.0.200",
+        "port": 8086,
+        "database": "alignak",
+        "login": "alignak",
+        "password": "mypass",
+        "grafana": "5864c1c98bde9c8bd787a779",
+        "_realm": "5864c1c98bde9c8bd787a781",
+        "_sub_realm": true
+	}
+    ]' "http://192.168.0.10:5000/influxdb"
+
+
+The timeseries information are stored in the backend (like retention) and send with a scheduled
+cron (internal in the Backend), so need to activate this cron, but only on one Backend in case you
+have a cluster of Backend (many backends).
+
+Activate in configuration file with::
+
+    "SCHEDULER_TIMESERIES_ACTIVE": true,
+
+IMPORTANT: you can't have more than one timeserie database (carbon / influxdb) linked to a grafana
+on each realm!
+
+Grafana: the dashboard/graph tool
+---------------------------------
+
+The backend can create the dashboards (one per host) and the graphs (one per host and one per
+services in the dashboard of the host related).
+
+We need define grafana server and activate the _cron_ on one Backend in case you have
+a cluster of Backend (many backends).
+
+For that, activate it in configuration file::
+
+    "SCHEDULER_GRAFANA_ACTIVE": true,
+
+Define the Grafana with resource _grafana_:
+
+* *address*: address of grafana (IP, DNS),
+* *port*: port of grafana, default 3000
+* *apikey*: the API KEY in grafana with right *admin*
+* *timezone*: the timezone used, default _browser_
+* *refresh*: refresh time of dashboards, default _1m_ (all 1 minutes)
+
+Curl example::
+
+    curl -X POST -H "Content-Type: application/json"
+    -H "Authorization: Basic MTQ3NjU2NDExMDA0MS1kN2FlNDYwZi1mZWQ3LTQ5YjQtYWMwZS04NTRlNGU0ODhmOWU6"
+    -H "Cache-Control: no-cache" -d '[
+	{
+        "name": "influx_001",
+        "address": "192.168.0.11",
+        "port": 3000,
+        "apikey": "43483998029a049494b536aa684398439d",
+        "_realm": "5864c1c98bde9c8bd787a781",
+        "_sub_realm": true
+	}
+    ]' "http://192.168.0.10:5000/grafana"
+
+
+You can create many grafana in the backend, for example a different grafana for each realm. This
+possibility can be used to give different access to grafana to different users (with different
+grafana server or with same grafana server but with different organizations and so different
+API KEYS).
 
 List of resources
 -----------------
@@ -399,7 +515,7 @@ List of resources used for configuration:
    resources/config*
 
 Action part
-~~~~~~~~
+~~~~~~~~~~~
 
 List of action resources:
 

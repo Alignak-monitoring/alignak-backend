@@ -6,9 +6,12 @@ This test check preparation of timeseries
 
 import time
 import os
+import copy
 import shlex
+import json
 import subprocess
 import requests
+import requests_mock
 import unittest2
 from bson.objectid import ObjectId
 from alignak_backend.timeseries import Timeseries
@@ -64,6 +67,31 @@ class TestTimeseries(unittest2.TestCase):
         resp = response.json()
         cls.realm_all = resp['_items'][0]['_id']
 
+        # add more realms
+        data = {"name": "All A", "_parent": cls.realm_all}
+        response = requests.post(cls.endpoint + '/realm', json=data, headers=headers,
+                                 auth=cls.auth)
+        resp = response.json()
+        cls.realm_all_A = copy.copy(resp['_id'])
+
+        data = {"name": "All A1", "_parent": cls.realm_all_A}
+        response = requests.post(cls.endpoint + '/realm', json=data, headers=headers,
+                                 auth=cls.auth)
+        resp = response.json()
+        cls.realm_all_A1 = copy.copy(resp['_id'])
+
+        data = {"name": "All B", "_parent": cls.realm_all}
+        response = requests.post(cls.endpoint + '/realm', json=data, headers=headers,
+                                 auth=cls.auth)
+        resp = response.json()
+        cls.realm_all_B = copy.copy(resp['_id'])
+
+        data = {"name": "All B1", "_parent": cls.realm_all_B}
+        response = requests.post(cls.endpoint + '/realm', json=data, headers=headers,
+                                 auth=cls.auth)
+        resp = response.json()
+        cls.realm_all_B1 = copy.copy(resp['_id'])
+
         # Get admin user
         response = requests.get(cls.endpoint + '/user', {"name": "admin"}, auth=cls.auth)
         resp = response.json()
@@ -99,7 +127,7 @@ class TestTimeseries(unittest2.TestCase):
             'long_output': '',
             'perf_data': 'Writing=3;;;; Reading=0;;;; Waiting=22;;;; Active=25;1000;2000;; '
                          'ReqPerSec=58.000000;100;200;; ConnPerSec=1.200000;200;300;; '
-                         'ReqPerConn=4.465602;;;;',
+                         'ReqPerConn=4.465602;;;; rta=0.083000ms;10.000000;15.000000;0.000000',
             '_realm': 'All.Propieres'
         }
 
@@ -108,87 +136,67 @@ class TestTimeseries(unittest2.TestCase):
             'data': [
                 {
                     'name': 'ReqPerConn',
-                    'value': {
-                        'name': 'ReqPerConn',
-                        'min': None,
-                        'max': None,
-                        'value': 4.465602,
-                        'warning': None,
-                        'critical': None,
-                        'uom': ''
-                    }
+                    'value': 4.465602,
                 },
                 {
                     'name': 'Writing',
-                    'value': {
-                        'name': 'Writing',
-                        'min': None,
-                        'max': None,
-                        'value': 3,
-                        'warning': None,
-                        'critical': None,
-                        'uom': ''
-                    }
+                    'value': 3
                 },
                 {
                     'name': 'Waiting',
-                    'value': {
-                        'name': 'Waiting',
-                        'min': None,
-                        'max': None,
-                        'value': 22,
-                        'warning': None,
-                        'critical': None,
-                        'uom': ''
-                    }
+                    'value': 22
                 },
                 {
                     'name': 'ConnPerSec',
-                    'value': {
-                        'name': 'ConnPerSec',
-                        'min': None,
-                        'max': None,
-                        'value': 1.2,
-                        'warning': 200,
-                        'critical': 300,
-                        'uom': ''
-                    }
+                    'value': 1.2
+                },
+                {
+                    'name': 'ConnPerSec_warning',
+                    'value': 200
+                },
+                {
+                    'name': 'ConnPerSec_critical',
+                    'value': 300
                 },
                 {
                     'name': 'Active',
-                    'value': {
-                        'name': 'Active',
-                        'min': None,
-                        'max': None,
-                        'value': 25,
-                        'warning': 1000,
-                        'critical': 2000,
-                        'uom': ''
-                    }
+                    'value': 25
+                },
+                {
+                    'name': 'Active_warning',
+                    'value': 1000
+                },
+                {
+                    'name': 'Active_critical',
+                    'value': 2000
                 },
                 {
                     'name': 'ReqPerSec',
-                    'value': {
-                        'name': 'ReqPerSec',
-                        'min': None,
-                        'max': None,
-                        'value': 58,
-                        'warning': 100,
-                        'critical': 200,
-                        'uom': ''
-                    }
+                    'value': 58
+                },
+                {
+                    'name': 'ReqPerSec_warning',
+                    'value': 100
+                },
+                {
+                    'name': 'ReqPerSec_critical',
+                    'value': 200
                 },
                 {
                     'name': 'Reading',
-                    'value': {
-                        'name': 'Reading',
-                        'min': None,
-                        'max': None,
-                        'value': 0,
-                        'warning': None,
-                        'critical': None,
-                        'uom': ''
-                    }
+                    'value': 0
+                },
+                {
+                    'name': 'rta',
+                    'value': 0.083
+                },
+                {
+                    'name': 'rta_warning',
+                    'value': 10
+                },
+                {
+                    'name': 'rta_critical',
+                    'value': 15
                 }
             ]
         }
@@ -223,27 +231,11 @@ class TestTimeseries(unittest2.TestCase):
             'data': [
                 {
                     'name': 'cache_descr_time',
-                    'value': {
-                        'name': 'cache_descr_time',
-                        'min': None,
-                        'max': None,
-                        'value': 1475663830,
-                        'warning': None,
-                        'critical': None,
-                        'uom': ''
-                    }
+                    'value': 1475663830
                 },
                 {
                     'name': 'em0_out_octet',
-                    'value': {
-                        'name': 'em0_out_octet',
-                        'min': None,
-                        'max': None,
-                        'value': 86608341539,
-                        'warning': None,
-                        'critical': None,
-                        'uom': ''
-                    }
+                    'value': 86608341539
                 }
             ]
         }
@@ -293,3 +285,515 @@ class TestTimeseries(unittest2.TestCase):
             self.assertEqual(prefix, 'All.realm B')
             prefix = Timeseries.get_realms_prefix(ObjectId(realm_a1))
             self.assertEqual(prefix, 'All.realm A.realm A1')
+
+    def test_timeseries_realm_all_sub(self):
+        # pylint: disable=too-many-locals
+        """
+        Test with 2 graphites + 1 infuxdb in realm All + sub_realm true.
+        We send data in timeseries class and catch the request to graphite and influxdb.
+
+        :return: None
+        """
+        headers = {'Content-Type': 'application/json'}
+        # add graphite 001
+        data = {
+            'name': 'graphite 001',
+            'carbon_address': '192.168.0.101',
+            'graphite_address': '192.168.0.101',
+            'prefix': '',
+            '_realm': self.realm_all,
+            '_sub_realm': True
+        }
+        response = requests.post(self.endpoint + '/graphite', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+        graphite_001 = resp['_id']
+
+        # add graphite 002
+        data = {
+            'name': 'graphite 002',
+            'carbon_address': '192.168.0.102',
+            'graphite_address': '192.168.0.102',
+            'prefix': '',
+            '_realm': self.realm_all,
+            '_sub_realm': True
+        }
+        response = requests.post(self.endpoint + '/graphite', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+        graphite_002 = resp['_id']
+
+        # add influxdb 001
+        data = {
+            'name': 'influxdb 001',
+            'address': '192.168.0.103',
+            'login': 'alignak',
+            'password': 'alignak',
+            'database': 'alignak',
+            '_realm': self.realm_all,
+            '_sub_realm': True
+        }
+        response = requests.post(self.endpoint + '/influxdb', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+        influxdb_001 = resp['_id']
+
+        # Add command
+        data = json.loads(open('cfg/command_ping.json').read())
+        data['_realm'] = self.realm_all
+        data['_sub_realm'] = True
+        data['name'] = 'ping1'
+        response = requests.post(self.endpoint + '/command', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+        command_ping = resp['_id']
+
+        # add host in realm All
+        data = {
+            'name': 'srv001',
+            'address': '127.0.0.1',
+            'check_command': command_ping,
+            '_realm': self.realm_all
+        }
+        response = requests.post(self.endpoint + '/host', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+        host_001 = resp['_id']
+
+        # add host in realm All A
+        data = {
+            'name': 'srv002',
+            'address': '127.0.0.1',
+            'check_command': command_ping,
+            '_realm': self.realm_all_A
+        }
+        response = requests.post(self.endpoint + '/host', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+        host_002 = resp['_id']
+
+        # add host in realm All A1
+        data = {
+            'name': 'srv003',
+            'address': '127.0.0.1',
+            'check_command': command_ping,
+            '_realm': self.realm_all_A1
+        }
+        response = requests.post(self.endpoint + '/host', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+        host_003 = resp['_id']
+
+        # add logcheckresult of host001
+        item = {
+            'host': ObjectId(host_001),
+            'host_name': 'srv001',
+            'service': None,
+            'service_name': '',
+            'state': 'OK',
+            'state_type': 'HARD',
+            'state_id': 0,
+            'acknowledged': False,
+            'last_check': int(time.time()),
+            'last_state': 'OK',
+            'output': 'PING OK - Packet loss = 0%, RTA = 0.08 ms',
+            'long_output': '',
+            'perf_data': "rta=74.827003ms;100.000000;110.000000;0.000000 pl=0%;10;;0",
+            '_realm': ObjectId(self.realm_all)
+        }
+        from alignak_backend.app import app, current_app
+        with app.test_request_context():
+            # test with timeseries not available, it must be quick (< 3 seconds), because have
+            # 2 graphites and 1 influx, so (2 + 1) * 1 second timeout * 2 (code execution between
+            # each tries send to timeseries)
+            time_begin = time.time()
+            Timeseries.after_inserted_logcheckresult([item])
+            execution_time = time.time() - time_begin
+            assert execution_time < 6
+
+            # check data in timeseriesretention
+            timeseriesretention_db = current_app.data.driver.db['timeseriesretention']
+            retentions = timeseriesretention_db.find()
+            retention_data = []
+            for retention in retentions:
+                retention_data.append({
+                    'realm': retention['realm'],
+                    'name': retention['name'],
+                    'service': retention['service'],
+                    'graphite': retention['graphite'],
+                    'influxdb': retention['influxdb'],
+                    'host': retention['host'],
+                    'value': retention['value']
+                })
+            ref = [
+                {'realm': u'All', 'name': u'rta', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv001',
+                 'value': 75},
+                {'realm': u'All', 'name': u'rta_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv001',
+                 'value': 100},
+                {'realm': u'All', 'name': u'rta_critical', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv001',
+                 'value': 110},
+
+                {'realm': u'All', 'name': u'pl', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv001',
+                 'value': 0},
+                {'realm': u'All', 'name': u'pl_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv001',
+                 'value': 10},
+
+                {'realm': u'All', 'name': u'rta', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv001',
+                 'value': 75},
+                {'realm': u'All', 'name': u'rta_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv001',
+                 'value': 100},
+                {'realm': u'All', 'name': u'rta_critical', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv001',
+                 'value': 110},
+
+                {'realm': u'All', 'name': u'pl', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv001',
+                 'value': 0},
+                {'realm': u'All', 'name': u'pl_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv001',
+                 'value': 10},
+
+                {'realm': u'All', 'name': u'rta', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv001', 'value': 75},
+                {'realm': u'All', 'name': u'rta_warning', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv001', 'value': 100},
+                {'realm': u'All', 'name': u'rta_critical', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv001', 'value': 110},
+
+                {'realm': u'All', 'name': u'pl', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv001', 'value': 0},
+                {'realm': u'All', 'name': u'pl_warning', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv001', 'value': 10},
+            ]
+            self.assertItemsEqual(ref, retention_data)
+            timeseriesretention_db.drop()
+
+        # === Test now with a host in realm All A1 ===
+        # add logcheckresult of host003
+        item = {
+            'host': ObjectId(host_003),
+            'host_name': 'srv003',
+            'service': None,
+            'service_name': '',
+            'state': 'OK',
+            'state_type': 'HARD',
+            'state_id': 0,
+            'acknowledged': False,
+            'last_check': int(time.time()),
+            'last_state': 'OK',
+            'output': 'PING OK - Packet loss = 0%, RTA = 0.08 ms',
+            'long_output': '',
+            'perf_data': "rta=32.02453ms;100.000000;110.000000;0.000000 pl=0%;10;;0",
+            '_realm': ObjectId(self.realm_all_A1)
+        }
+        with app.test_request_context():
+            # test with timeseries not available, it must be quick (< 3 seconds), because have
+            # 2 graphites and 1 influx, so (2 + 1) * 1 second timeout * 2 (code execution between
+            # each tries send to timeseries)
+            time_begin = time.time()
+            Timeseries.after_inserted_logcheckresult([item])
+            execution_time = time.time() - time_begin
+            assert execution_time < 6
+
+            # check data in timeseriesretention
+            timeseriesretention_db = current_app.data.driver.db['timeseriesretention']
+            retentions = timeseriesretention_db.find()
+            retention_data = []
+            for retention in retentions:
+                retention_data.append({
+                    'realm': retention['realm'],
+                    'name': retention['name'],
+                    'service': retention['service'],
+                    'graphite': retention['graphite'],
+                    'influxdb': retention['influxdb'],
+                    'host': retention['host'],
+                    'value': retention['value']
+                })
+            ref = [
+                {'realm': u'All.All A.All A1', 'name': u'rta', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 32},
+                {'realm': u'All.All A.All A1', 'name': u'rta_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 100},
+                {'realm': u'All.All A.All A1', 'name': u'rta_critical', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 110},
+
+                {'realm': u'All.All A.All A1', 'name': u'pl', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 0},
+                {'realm': u'All.All A.All A1', 'name': u'pl_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 10},
+
+                {'realm': u'All.All A.All A1', 'name': u'rta', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 32},
+                {'realm': u'All.All A.All A1', 'name': u'rta_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 100},
+                {'realm': u'All.All A.All A1', 'name': u'rta_critical', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 110},
+
+                {'realm': u'All.All A.All A1', 'name': u'pl', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 0},
+                {'realm': u'All.All A.All A1', 'name': u'pl_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 10},
+
+                {'realm': u'All.All A.All A1', 'name': u'rta', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv003', 'value': 32},
+                {'realm': u'All.All A.All A1', 'name': u'rta_warning', 'service': u'',
+                 'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv003',
+                 'value': 100},
+                {'realm': u'All.All A.All A1', 'name': u'rta_critical', 'service': u'',
+                 'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv003',
+                 'value': 110},
+
+                {'realm': u'All.All A.All A1', 'name': u'pl', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv003', 'value': 0},
+                {'realm': u'All.All A.All A1', 'name': u'pl_warning', 'service': u'',
+                 'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv003',
+                 'value': 10},
+            ]
+            self.assertItemsEqual(ref, retention_data)
+            timeseriesretention_db.drop()
+
+        # === We will have too a graphite in realm all A + sub_realm false ===
+        # add graphite 003
+        data = {
+            'name': 'graphite 003',
+            'carbon_address': '192.168.0.104',
+            'graphite_address': '192.168.0.104',
+            'prefix': '',
+            '_realm': self.realm_all_A,
+            '_sub_realm': False
+        }
+        response = requests.post(self.endpoint + '/graphite', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+        graphite_003 = resp['_id']
+
+        # Test now with a host in realm All A1
+        # add logcheckresult of host003
+        item = {
+            'host': ObjectId(host_003),
+            'host_name': 'srv003',
+            'service': None,
+            'service_name': '',
+            'state': 'OK',
+            'state_type': 'HARD',
+            'state_id': 0,
+            'acknowledged': False,
+            'last_check': int(time.time()),
+            'last_state': 'OK',
+            'output': 'PING OK - Packet loss = 0%, RTA = 0.08 ms',
+            'long_output': '',
+            'perf_data': "rta=32.02453ms;100.000000;110.000000;0.000000 pl=0%;10;;0",
+            '_realm': ObjectId(self.realm_all_A1)
+        }
+        with app.test_request_context():
+            # test with timeseries not available, it must be quick (< 3 seconds), because have
+            # 2 graphites and 1 influx, so (2 + 1) * 1 second timeout * 2 (code execution between
+            # each tries send to timeseries)
+            time_begin = time.time()
+            Timeseries.after_inserted_logcheckresult([item])
+            execution_time = time.time() - time_begin
+            assert execution_time < 6
+
+            # check data in timeseriesretention
+            timeseriesretention_db = current_app.data.driver.db['timeseriesretention']
+            retentions = timeseriesretention_db.find()
+            retention_data = []
+            for retention in retentions:
+                retention_data.append({
+                    'realm': retention['realm'],
+                    'name': retention['name'],
+                    'service': retention['service'],
+                    'graphite': retention['graphite'],
+                    'influxdb': retention['influxdb'],
+                    'host': retention['host'],
+                    'value': retention['value']
+                })
+            ref = [
+                {'realm': u'All.All A.All A1', 'name': u'rta', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 32},
+                {'realm': u'All.All A.All A1', 'name': u'rta_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 100},
+                {'realm': u'All.All A.All A1', 'name': u'rta_critical', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 110},
+
+                {'realm': u'All.All A.All A1', 'name': u'pl', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 0},
+                {'realm': u'All.All A.All A1', 'name': u'pl_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv003',
+                 'value': 10},
+
+                {'realm': u'All.All A.All A1', 'name': u'rta', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 32},
+                {'realm': u'All.All A.All A1', 'name': u'rta_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 100},
+                {'realm': u'All.All A.All A1', 'name': u'rta_critical', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 110},
+
+                {'realm': u'All.All A.All A1', 'name': u'pl', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 0},
+                {'realm': u'All.All A.All A1', 'name': u'pl_warning', 'service': u'',
+                 'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv003',
+                 'value': 10},
+
+                {'realm': u'All.All A.All A1', 'name': u'rta', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv003', 'value': 32},
+                {'realm': u'All.All A.All A1', 'name': u'rta_warning', 'service': u'',
+                 'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv003',
+                 'value': 100},
+                {'realm': u'All.All A.All A1', 'name': u'rta_critical', 'service': u'',
+                 'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv003',
+                 'value': 110},
+
+                {'realm': u'All.All A.All A1', 'name': u'pl', 'service': u'', 'graphite': None,
+                 'influxdb': ObjectId(influxdb_001), 'host': u'srv003', 'value': 0},
+                {'realm': u'All.All A.All A1', 'name': u'pl_warning', 'service': u'',
+                 'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv003',
+                 'value': 10},
+            ]
+            self.assertItemsEqual(ref, retention_data)
+            timeseriesretention_db.drop()
+
+            # Test now with a host in realm All A
+            # add logcheckresult of host002
+            item = {
+                'host': ObjectId(host_002),
+                'host_name': 'srv002',
+                'service': None,
+                'service_name': '',
+                'state': 'OK',
+                'state_type': 'HARD',
+                'state_id': 0,
+                'acknowledged': False,
+                'last_check': int(time.time()),
+                'last_state': 'OK',
+                'output': 'PING OK - Packet loss = 0%, RTA = 0.08 ms',
+                'long_output': '',
+                'perf_data': "rta=32.02453ms;100.000000;110.000000;0.000000 pl=0%;10;;0",
+                '_realm': ObjectId(self.realm_all_A)
+            }
+            with app.test_request_context():
+                # test with timeseries not available, it must be quick (< 3 seconds), because have
+                # 3 graphites and 1 influx, so (3 + 1) * 1 second timeout * 2 (code execution
+                # between each tries send to timeseries)
+                time_begin = time.time()
+                Timeseries.after_inserted_logcheckresult([item])
+                execution_time = time.time() - time_begin
+                assert execution_time < 8
+
+                # check data in timeseriesretention
+                timeseriesretention_db = current_app.data.driver.db['timeseriesretention']
+                retentions = timeseriesretention_db.find()
+                retention_data = []
+                for retention in retentions:
+                    retention_data.append({
+                        'realm': retention['realm'],
+                        'name': retention['name'],
+                        'service': retention['service'],
+                        # 'timestamp': retention['timestamp'],
+                        'graphite': retention['graphite'],
+                        'influxdb': retention['influxdb'],
+                        'host': retention['host'],
+                        'value': retention['value']
+                    })
+                ref = [
+                    {'realm': u'All.All A', 'name': u'rta', 'service': u'',
+                     'graphite': ObjectId(graphite_003), 'influxdb': None, 'host': u'srv002',
+                     'value': 32},
+                    {'realm': u'All.All A', 'name': u'rta_warning', 'service': u'',
+                     'graphite': ObjectId(graphite_003), 'influxdb': None, 'host': u'srv002',
+                     'value': 100},
+                    {'realm': u'All.All A', 'name': u'rta_critical', 'service': u'',
+                     'graphite': ObjectId(graphite_003), 'influxdb': None, 'host': u'srv002',
+                     'value': 110},
+
+                    {'realm': u'All.All A', 'name': u'pl', 'service': u'',
+                     'graphite': ObjectId(graphite_003), 'influxdb': None, 'host': u'srv002',
+                     'value': 0},
+                    {'realm': u'All.All A', 'name': u'pl_warning', 'service': u'',
+                     'graphite': ObjectId(graphite_003), 'influxdb': None, 'host': u'srv002',
+                     'value': 10},
+
+                    {'realm': u'All.All A', 'name': u'rta', 'service': u'',
+                     'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv002',
+                     'value': 32},
+                    {'realm': u'All.All A', 'name': u'rta_warning', 'service': u'',
+                     'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv002',
+                     'value': 100},
+                    {'realm': u'All.All A', 'name': u'rta_critical', 'service': u'',
+                     'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv002',
+                     'value': 110},
+
+                    {'realm': u'All.All A', 'name': u'pl', 'service': u'',
+                     'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv002',
+                     'value': 0},
+                    {'realm': u'All.All A', 'name': u'pl_warning', 'service': u'',
+                     'graphite': ObjectId(graphite_001), 'influxdb': None, 'host': u'srv002',
+                     'value': 10},
+
+                    {'realm': u'All.All A', 'name': u'rta', 'service': u'',
+                     'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv002',
+                     'value': 32},
+                    {'realm': u'All.All A', 'name': u'rta_warning', 'service': u'',
+                     'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv002',
+                     'value': 100},
+                    {'realm': u'All.All A', 'name': u'rta_critical', 'service': u'',
+                     'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv002',
+                     'value': 110},
+
+                    {'realm': u'All.All A', 'name': u'pl', 'service': u'',
+                     'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv002',
+                     'value': 0},
+                    {'realm': u'All.All A', 'name': u'pl_warning', 'service': u'',
+                     'graphite': ObjectId(graphite_002), 'influxdb': None, 'host': u'srv002',
+                     'value': 10},
+
+                    {'realm': u'All.All A', 'name': u'rta', 'service': u'', 'graphite': None,
+                     'influxdb': ObjectId(influxdb_001), 'host': u'srv002', 'value': 32},
+                    {'realm': u'All.All A', 'name': u'rta_warning', 'service': u'',
+                     'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv002',
+                     'value': 100},
+                    {'realm': u'All.All A', 'name': u'rta_critical', 'service': u'',
+                     'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv002',
+                     'value': 110},
+
+                    {'realm': u'All.All A', 'name': u'pl', 'service': u'', 'graphite': None,
+                     'influxdb': ObjectId(influxdb_001), 'host': u'srv002', 'value': 0},
+                    {'realm': u'All.All A', 'name': u'pl_warning', 'service': u'',
+                     'graphite': None, 'influxdb': ObjectId(influxdb_001), 'host': u'srv002',
+                     'value': 10},
+                ]
+                self.assertItemsEqual(ref, retention_data)
+                timeseriesretention_db.drop()

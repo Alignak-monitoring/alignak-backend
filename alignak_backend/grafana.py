@@ -6,9 +6,9 @@
 
     This module manages the grafana dashboard / graphs
 """
-from __future__ import print_function
 from future.utils import iteritems
 import requests
+from bson.objectid import ObjectId
 from flask import current_app
 from eve.methods.patch import patch_internal
 from alignak_backend.perfdata import PerfDatas
@@ -19,23 +19,38 @@ class Grafana(object):
     """
         Grafana class
     """
-    def __init__(self):
-        self.api_key = current_app.config.get('GRAFANA_APIKEY')
-        self.host = current_app.config.get('GRAFANA_HOST')
-        self.port = str(current_app.config.get('GRAFANA_PORT'))
-        self.dashboard_template = current_app.config.get('GRAFANA_TEMPLATE_DASHBOARD')
-        self.graphite = current_app.config.get('GRAPHITE_HOST')
-        self.carbon = current_app.config.get('CARBON_HOST')
-        self.influxdb = current_app.config.get('INFLUXDB_HOST')
-        datasource = None
-        if self.influxdb:
-            datasource = self.get_datasource('influxdb')
-        elif self.graphite:
-            datasource = self.get_datasource('graphite')
-        if datasource:
-            self.datasource = datasource
-        else:
-            self.datasource = None
+    def __init__(self, data):
+        self.api_key = data['apikey']
+        self.host = data['address']
+        self.port = str(data['port'])
+        self.dashboard_template = {'timezone': data['timezone'], 'refresh': data['refresh'],
+                                   'schemaVersion': 13}
+
+        # get graphite / influx for each realm of the grafana
+        self.timeseries = {}
+
+        graphite_db = current_app.data.driver.db['graphite']
+        influxdb_db = current_app.data.driver.db['influxdb']
+        realm_db = current_app.data.driver.db['realm']
+
+        graphites = graphite_db.find({'grafana': data['_id']})
+        for graphite in graphites:
+            graphite['type'] = 'graphite'
+            self.timeseries[graphite['_realm']] = graphite
+            if graphite['_sub_realm']:
+                realm = realm_db.find_one({'_id': graphite['_realm']})
+                for child_realm in realm['_all_children']:
+                    self.timeseries[child_realm] = graphite
+
+        influxdbs = influxdb_db.find({'grafana': data['_id']})
+        for influxdb in influxdbs:
+            influxdb['type'] = 'influxdb'
+            self.timeseries[influxdb['_realm']] = influxdb
+            if influxdb['_sub_realm']:
+                realm = realm_db.find_one({'_id': influxdb['_realm']})
+                for child_realm in realm['_all_children']:
+                    self.timeseries[child_realm] = influxdb
+        self.get_datasource()
 
     def create_dashboard(self, host_id):  # pylint: disable=too-many-locals
         """
@@ -43,10 +58,12 @@ class Grafana(object):
 
         :param host_id: id of the host
         :type host_id: str
-        :return: None
+        :return: True if created, otherwise False
+        :rtype: bool
         """
-        if not self.datasource:
+        if len(self.datasources) == 0:
             return
+
         headers = {"Authorization": "Bearer " + self.api_key}
 
         host_db = current_app.data.driver.db['host']
@@ -58,18 +75,41 @@ class Grafana(object):
         command = command_db.find_one({'_id': host['check_command']})
         command_name = command['name']
 
+        # if this host not have a datasource (influxdb, graphite) in grafana, not create dashboard
+        if host['_realm'] not in self.timeseries:
+            return False
+
         rows = []
         targets = []
-        refids = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']
+        refids = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
         perfdata = PerfDatas(host['ls_perf_data'])
         num = 0
         for measurement in perfdata.metrics:
             fields = perfdata.metrics[measurement].__dict__
             mytarget = Timeseries.get_realms_prefix(host['_realm']) + '.' + hostname
             mytarget += '.' + fields['name']
-            targets.append(self.generate_target(fields['name'], {"host": hostname}, refids[num],
-                                                mytarget))
+            elements = {'measurement': fields['name'], 'refid': refids[num], 'mytarget': mytarget}
+            targets.append(self.generate_target(elements, {"host": hostname},
+                                                ObjectId(host['_realm'])))
             num += 1
+            if fields['warning'] is not None:
+                mytarget = Timeseries.get_realms_prefix(host['_realm']) + '.' + hostname
+                mytarget += '.' + fields['name'] + '_warning'
+                elements = {'measurement': fields['name'] + '_warning', 'refid': refids[num],
+                            'mytarget': mytarget}
+                targets.append(self.generate_target(elements, {"host": hostname},
+                                                    ObjectId(host['_realm'])))
+            num += 1
+            if fields['critical'] is not None:
+                mytarget = Timeseries.get_realms_prefix(host['_realm']) + '.' + hostname
+                mytarget += '.' + fields['name'] + '_critical'
+                elements = {'measurement': fields['name'] + '_critical', 'refid': refids[num],
+                            'mytarget': mytarget}
+                targets.append(self.generate_target(elements, {"host": hostname},
+                                                    ObjectId(host['_realm'])))
+            num += 1
+
         if len(targets) > 0:
             rows.append(self.generate_row(command_name, targets))
             if host['ls_last_check'] > 0:
@@ -93,11 +133,34 @@ class Grafana(object):
                     fields = perfdata.metrics[measurement].__dict__
                     mytarget = Timeseries.get_realms_prefix(host['_realm']) + '.' + hostname
                     mytarget += '.' + service['name'] + '.' + fields['name']
-                    targets.append(self.generate_target(fields['name'],
+                    elements = {'measurement': fields['name'], 'refid': refids[num],
+                                'mytarget': mytarget}
+                    targets.append(self.generate_target(elements,
                                                         {"host": hostname,
-                                                         "service": service['name']}, refids[num],
-                                                        mytarget))
+                                                         "service": service['name']},
+                                                        ObjectId(service['_realm'])))
                     num += 1
+                    if fields['warning'] is not None:
+                        mytarget = Timeseries.get_realms_prefix(host['_realm']) + '.' + hostname
+                        mytarget += '.' + service['name'] + '.' + fields['name'] + "_warning"
+                        elements = {'measurement': fields['name'] + "_warning",
+                                    'refid': refids[num], 'mytarget': mytarget}
+                        targets.append(self.generate_target(elements,
+                                                            {"host": hostname,
+                                                             "service": service['name']},
+                                                            ObjectId(service['_realm'])))
+                    num += 1
+                    if fields['critical'] is not None:
+                        mytarget = Timeseries.get_realms_prefix(host['_realm']) + '.' + hostname
+                        mytarget += '.' + service['name'] + '.' + fields['name'] + "_critical"
+                        elements = {'measurement': fields['name'] + "_critical",
+                                    'refid': refids[num], 'mytarget': mytarget}
+                        targets.append(self.generate_target(elements,
+                                                            {"host": hostname,
+                                                             "service": service['name']},
+                                                            ObjectId(service['_realm'])))
+                    num += 1
+
                 if len(targets) > 0:
                     rows.append(self.generate_row(service['name'], targets))
                     # Update service live state
@@ -118,74 +181,75 @@ class Grafana(object):
         }
         requests.post('http://' + self.host + ':' + self.port + '/api/dashboards/db', json=data,
                       headers=headers)
+        return True
 
-    def get_datasource(self, dtype):
+    def get_datasource(self):
         """
         Get datasource or create it if not exist
 
-        :param dtype: type of the datasource: influxdb | graphite
-        :type dtype: str
-        :return: name of the datasource
-        :rtype: str
+        :return: None
         """
+        self.datasources = {}
         headers = {"Authorization": "Bearer " + self.api_key}
         response = requests.get('http://' + self.host + ':' + self.port + '/api/datasources',
                                 headers=headers)
         resp = response.json()
-        if dtype == 'influxdb':
-            ds_url = self.influxdb
-        elif dtype == 'graphite':
-            ds_url = self.graphite
+        # get all datasource of grafana
         for datasource in iter(resp):
-            if datasource['type'] == dtype and ds_url in datasource['url']:
-                return datasource['name']
-        # no datasource, create one
-        if dtype == 'influxdb':
-            data = {
-                "name": "influxdb",
-                "type": "influxdb",
-                "typeLogoUrl": "",
-                "access": "proxy",
-                "url": "http://" + self.influxdb + ":" +
-                       str(current_app.config.get('INFLUXDB_PORT')),
-                "password": current_app.config.get('INFLUXDB_PASSWORD'),
-                "user": current_app.config.get('INFLUXDB_LOGIN'),
-                "database": current_app.config.get('INFLUXDB_DATABASE'),
-                "basicAuth": False,
-                "basicAuthUser": "",
-                "basicAuthPassword": "",
-                "withCredentials": False,
-                "isDefault": True,
-                "jsonData": {}
-            }
-        elif dtype == 'graphite':
-            data = {
-                "name": "graphite",
-                "type": "graphite",
-                "access": "proxy",
-                "url": "http://" + self.graphite + ":" +
-                       str(current_app.config.get('GRAPHITE_PORT')),
-                "basicAuth": False,
-                "basicAuthUser": "",
-                "basicAuthPassword": "",
-                "withCredentials": False,
-                "isDefault": True,
-                "jsonData": {}
-            }
-        response = requests.post('http://' + self.host + ':' + self.port + '/api/datasources',
-                                 json=data, headers=headers)
-        resp = response.json()
-        print(resp)
-        return dtype
+            self.datasources[datasource['name']] = datasource
 
-    def generate_target(self, measurement, tags, refid, mytarget):
+        # associate the datasource to timeseries data
+        for timeserie in self.timeseries.values():
+            if str(timeserie['_id']) not in self.datasources:
+                # no datasource, create one
+                if timeserie['type'] == 'influxdb':
+                    data = {
+                        "name": str(timeserie['_id']),
+                        "type": "influxdb",
+                        "typeLogoUrl": "",
+                        "access": "proxy",
+                        "url": "http://" + timeserie['address'] + ":" + str(timeserie['port']),
+                        "password": timeserie['password'],
+                        "user": timeserie['login'],
+                        "database": timeserie['database'],
+                        "basicAuth": False,
+                        "basicAuthUser": "",
+                        "basicAuthPassword": "",
+                        "withCredentials": False,
+                        "isDefault": True,
+                        "jsonData": {}
+                    }
+                elif timeserie['type'] == 'graphite':
+                    data = {
+                        "name": str(timeserie['_id']),
+                        "type": "graphite",
+                        "access": "proxy",
+                        "url": "http://" + timeserie['graphite_address'] + ":" +
+                               str(timeserie['graphite_port']),
+                        "basicAuth": False,
+                        "basicAuthUser": "",
+                        "basicAuthPassword": "",
+                        "withCredentials": False,
+                        "isDefault": True,
+                        "jsonData": {}
+                    }
+                response = requests.post(
+                    'http://' + self.host + ':' + self.port + '/api/datasources',
+                    json=data, headers=headers)
+                resp = response.json()
+                self.datasources[str(timeserie['_id'])] = resp
+
+    def generate_target(self, elements, tags, realm):
+        # measurement, refid, mytarget):
         """
         Generate target structure for dashboard
 
-        :param measurement: name of measurement
-        :type measurement: str
+        :param elements: dictionary with elements: measurement, refid, mytarget
+        :type measurement: dict
         :param tags: list of tags
         :type tags: list
+        :param realm: realm _id of the item (host / service)
+        :type realm: str
         :return: dictionary / structure of target (cf API Grafana)
         :rtype: dict
         """
@@ -201,8 +265,8 @@ class Grafana(object):
             prepare_tags.append(data)
 
         return {
-            "dsType": self.datasource,
-            "measurement": measurement,
+            "dsType": self.timeseries[realm]['name'],
+            "measurement": elements['measurement'],
             "resultFormat": "time_series",
             "policy": "default",
             "tags": prepare_tags,
@@ -228,8 +292,8 @@ class Grafana(object):
                     }
                 ]
             ],
-            "target": mytarget,
-            "refId": refid,
+            "target": elements['mytarget'],
+            "refId": elements['refid'],
         }
 
     def generate_row(self, title, targets):
