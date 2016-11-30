@@ -49,15 +49,23 @@ def get_schema():
                 'type': 'integer',
                 'required': True,
             },
-            'for_graphite': {
-                'type': 'boolean',
-                'required': True,
-                'default': False
+            'graphite': {
+                'type': 'objectid',
+                'data_relation': {
+                    'resource': 'graphite',
+                    'embeddable': True
+                },
+                'nullable': True,
+                'default': None
             },
-            'for_influxdb': {
-                'type': 'boolean',
-                'required': True,
-                'default': False
+            'influxdb': {
+                'type': 'objectid',
+                'data_relation': {
+                    'resource': 'influxdb',
+                    'embeddable': True
+                },
+                'nullable': True,
+                'default': None
             },
         }
     }

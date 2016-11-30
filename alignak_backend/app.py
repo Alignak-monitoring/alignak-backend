@@ -1094,17 +1094,6 @@ settings['SCHEDULER_GRAFANA_ACTIVE'] = False
 settings['SCHEDULER_TIMEZONE'] = 'Etc/GMT'
 settings['JOBS'] = []
 
-settings['GRAPHITE_HOST'] = ''
-settings['GRAPHITE_PORT'] = 8080
-settings['CARBON_HOST'] = ''
-settings['CARBON_PORT'] = 2004
-
-settings['INFLUXDB_HOST'] = ''
-settings['INFLUXDB_PORT'] = 8086
-settings['INFLUXDB_LOGIN'] = 'root'
-settings['INFLUXDB_PASSWORD'] = 'root'
-settings['INFLUXDB_DATABASE'] = 'alignak'
-
 # Read configuration file to update/complete the configuration
 get_settings(settings)
 
@@ -1123,7 +1112,7 @@ if settings['SCHEDULER_TIMESERIES_ACTIVE']:
             'seconds': 10
         }
     )
-if settings['SCHEDULER_GRAFANA_ACTIVE'] and settings['GRAFANA_HOST'] is not None:
+if settings['SCHEDULER_GRAFANA_ACTIVE']:
     jobs.append(
         {
             'id': 'cron_grafana',
@@ -1415,15 +1404,7 @@ def backend_config():
     Offer route to get the backend config
     """
     my_config = {"PAGINATION_LIMIT": settings['PAGINATION_LIMIT'],
-                 "PAGINATION_DEFAULT": settings['PAGINATION_DEFAULT'],
-                 'metrics': []}
-    if settings['GRAPHITE_HOST'] is not None:
-        my_config['metrics'].append('graphite')
-    if settings['INFLUXDB_HOST'] is not None:
-        my_config['metrics'].append('influxdb')
-    if settings['GRAFANA_HOST'] is not None:
-        my_config['GRAFANA_HOST'] = settings['GRAFANA_HOST']
-        my_config['GRAFANA_PORT'] = settings['GRAFANA_PORT']
+                 "PAGINATION_DEFAULT": settings['PAGINATION_DEFAULT']}
     return jsonify(my_config)
 
 
@@ -1436,36 +1417,25 @@ def cron_timeseries():
     """
     with app.test_request_context():
         timeseriesretention_db = current_app.data.driver.db['timeseriesretention']
+        graphite_db = current_app.data.driver.db['graphite']
+        influxdb_db = current_app.data.driver.db['influxdb']
+
         if timeseriesretention_db.find().count() > 0:
-            tsc = timeseriesretention_db.find({'for_graphite': True, 'for_influxdb': False})
+            tsc = timeseriesretention_db.find({'graphite': {'$ne': None}})
             for data in tsc:
-                if not Timeseries.send_to_timeseries_graphite([data]):
+                graphite = graphite_db.find_one({'_id': data['graphite']})
+                if not Timeseries.send_to_timeseries_graphite([data], graphite):
                     break
                 lookup = {"_id": data['_id']}
                 deleteitem_internal('timeseriesretention', False, False, **lookup)
-            tsc = timeseriesretention_db.find({'for_graphite': False, 'for_influxdb': True})
+
+            tsc = timeseriesretention_db.find({'influxdb': {'$ne': None}})
             for data in tsc:
-                if not Timeseries.send_to_timeseries_influxdb([data]):
+                influxdb = influxdb_db.find_one({'_id': data['influxdb']})
+                if not Timeseries.send_to_timeseries_influxdb([data], influxdb):
                     break
                 lookup = {"_id": data['_id']}
                 deleteitem_internal('timeseriesretention', False, False, **lookup)
-            tsc = timeseriesretention_db.find({'for_graphite': True, 'for_influxdb': True})
-            for data in tsc:
-                graphite_serv = True
-                influxdb_serv = True
-                if not Timeseries.send_to_timeseries_graphite([data]):
-                    graphite_serv = False
-                if not Timeseries.send_to_timeseries_influxdb([data]):
-                    influxdb_serv = False
-                lookup = {"_id": data['_id']}
-                if graphite_serv and influxdb_serv:
-                    deleteitem_internal('timeseriesretention', False, False, **lookup)
-                elif graphite_serv and not influxdb_serv:
-                    patch_internal('timeseriesretention', {"for_graphite": False}, False, False,
-                                   **lookup)
-                elif influxdb_serv and not graphite_serv:
-                    patch_internal('timeseriesretention', {"for_influxdb": False}, False, False,
-                                   **lookup)
 
 
 @app.route("/cron_grafana")
@@ -1477,12 +1447,21 @@ def cron_grafana():
     """
     with app.test_request_context():
         hosts_db = current_app.data.driver.db['host']
-        grafana = Grafana()
+        grafana_db = current_app.data.driver.db['grafana']
+        realm_db = current_app.data.driver.db['realm']
 
-        hosts = hosts_db.find({'ls_grafana': False})
-        for host in hosts:
-            if 'ls_perf_data' in host and host['ls_perf_data']:
-                grafana.create_dashboard(host['_id'])
+        grafanas = grafana_db.find()
+        for grafana in grafanas:
+            graf = Grafana(grafana)
+            # get the realms of the grafana
+            realm = realm_db.find_one({'_id': grafana['_realm']})
+            if grafana['_sub_realm']:
+                hosts = hosts_db.find({'ls_grafana': False, '_realm': realm['_all_children']})
+            else:
+                hosts = hosts_db.find({'ls_grafana': False, '_realm': realm['_id']})
+            for host in hosts:
+                if host['ls_perf_data'] != '':
+                    graf.create_dashboard(host['_id'])
 
 
 @app.route('/docs')
