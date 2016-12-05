@@ -644,6 +644,29 @@ def pre_hostgroup_patch(updates, original):
             updates['_tree_parents'].append(updates['_parent'])
 
 
+def pre_timeseries_post(items):
+    """
+    We can't have more than 1 timeseries database (graphite, influx) linked to same
+    grafana in same realm
+
+    :param items:
+    :type items: dict
+    :return: None
+    """
+    graphite_drv = current_app.data.driver.db['graphite']
+    influxdb_drv = current_app.data.driver.db['influxdb']
+    realm_drv = current_app.data.driver.db['realm']
+    for dummy, item in enumerate(items):
+        if 'grafana' in item:
+            # search graphite with grafana id in this realm
+            if graphite_drv.find({'_realm': item['_realm'], 'grafana': item['grafana']}).count() > 0:
+                abort(make_response("A timeserie is yet attached to grafana in this realm", 412))
+            # search influxdb with grafana id in this realm
+            if influxdb_drv.find({'_realm': item['_realm'], 'grafana': item['grafana']}).count() > 0:
+                abort(make_response("A timeserie is yet attached to grafana in this realm", 412))
+            realm = realm_drv.find_one({'_id': item['_realm']})
+
+
 # Services groups
 def pre_servicegroup_post(items):
     """
@@ -1150,6 +1173,8 @@ app.on_update_realm += pre_realm_patch
 app.on_update_usergroup += pre_usergroup_patch
 app.on_update_hostgroup += pre_hostgroup_patch
 app.on_update_servicegroup += pre_servicegroup_patch
+app.on_insert_graphite += pre_timeseries_post
+app.on_insert_influxdb += pre_timeseries_post
 
 # docs api
 Bootstrap(app)
@@ -1419,7 +1444,6 @@ def cron_timeseries():
         timeseriesretention_db = current_app.data.driver.db['timeseriesretention']
         graphite_db = current_app.data.driver.db['graphite']
         influxdb_db = current_app.data.driver.db['influxdb']
-
         if timeseriesretention_db.find().count() > 0:
             tsc = timeseriesretention_db.find({'graphite': {'$ne': None}})
             for data in tsc:
@@ -1456,11 +1480,13 @@ def cron_grafana():
             # get the realms of the grafana
             realm = realm_db.find_one({'_id': grafana['_realm']})
             if grafana['_sub_realm']:
-                hosts = hosts_db.find({'ls_grafana': False, '_realm': realm['_all_children']})
+                children = realm['_all_children']
+                children.append(realm['_id'])
+                hosts = hosts_db.find({'ls_grafana': False, '_realm': {"$in": children}})
             else:
                 hosts = hosts_db.find({'ls_grafana': False, '_realm': realm['_id']})
             for host in hosts:
-                if host['ls_perf_data'] != '':
+                if host['ls_perf_data']:
                     graf.create_dashboard(host['_id'])
 
 

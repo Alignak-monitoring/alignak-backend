@@ -37,8 +37,8 @@ def get_schema():
             },
             'port': {
                 'type': 'integer',
-                'required': True,
                 'empty': False,
+                'default': 3000
             },
             'apikey': {
                 'type': 'string',

@@ -9,6 +9,7 @@
 from __future__ import print_function
 from future.utils import iteritems
 import requests
+from bson.objectid import ObjectId
 from flask import current_app
 from eve.methods.patch import patch_internal
 from alignak_backend.perfdata import PerfDatas
@@ -30,17 +31,25 @@ class Grafana(object):
 
         graphite_db = current_app.data.driver.db['graphite']
         influxdb_db = current_app.data.driver.db['influxdb']
+        realm_db = current_app.data.driver.db['realm']
 
         graphites = graphite_db.find({'grafana': data['_id']})
         for graphite in graphites:
             graphite['type'] = 'graphite'
             self.timeseries[graphite['_realm']] = graphite
+            if graphite['_sub_realm']:
+                realm = realm_db.find_one({'_id': graphite['_realm']})
+                for child_realm in realm['_all_children']:
+                    self.timeseries[child_realm] = graphite
 
-        influxdbs = graphite_db.find({'influxdb': data['_id']})
+        influxdbs = influxdb_db.find({'influxdb': data['_id']})
         for influxdb in influxdbs:
             influxdb['type'] = 'influxdb'
             self.timeseries[influxdb['_realm']] = influxdb
-
+            if influxdb['_sub_realm']:
+                realm = realm_db.find_one({'_id': influxdb['_realm']})
+                for child_realm in realm['_all_children']:
+                    self.timeseries[child_realm] = influxdb
         self.get_datasource()
 
     def create_dashboard(self, host_id):  # pylint: disable=too-many-locals
@@ -49,8 +58,10 @@ class Grafana(object):
 
         :param host_id: id of the host
         :type host_id: str
-        :return: None
+        :return: True if created, otherwise False
+        :rtype: bool
         """
+        print("CREATE DASHBOARD......")
         if len(self.datasources) == 0:
             return
 
@@ -65,6 +76,10 @@ class Grafana(object):
         command = command_db.find_one({'_id': host['check_command']})
         command_name = command['name']
 
+        # if this host not have a datasource (influxdb, graphite) in grafana, not create dashboard
+        if host['_realm'] not in self.timeseries:
+            return False
+
         rows = []
         targets = []
         refids = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']
@@ -75,7 +90,7 @@ class Grafana(object):
             mytarget = Timeseries.get_realms_prefix(host['_realm']) + '.' + hostname
             mytarget += '.' + fields['name']
             targets.append(self.generate_target(fields['name'], {"host": hostname}, refids[num],
-                                                mytarget, host['_realm']))
+                                                mytarget, ObjectId(host['_realm'])))
             num += 1
         if len(targets) > 0:
             rows.append(self.generate_row(command_name, targets))
@@ -103,7 +118,7 @@ class Grafana(object):
                     targets.append(self.generate_target(fields['name'],
                                                         {"host": hostname,
                                                          "service": service['name']}, refids[num],
-                                                        mytarget))
+                                                        mytarget, ObjectId(service['_realm'])))
                     num += 1
                 if len(targets) > 0:
                     rows.append(self.generate_row(service['name'], targets))
@@ -125,6 +140,7 @@ class Grafana(object):
         }
         requests.post('http://' + self.host + ':' + self.port + '/api/dashboards/db', json=data,
                       headers=headers)
+        return True
 
     def get_datasource(self):
         """
@@ -142,16 +158,16 @@ class Grafana(object):
             self.datasources[datasource['name']] = datasource
 
         # associate the datasource to timeseries data
-        for timeserie in self.timeseries:
-            if timeserie['_id'] not in self.datasources:
+        for timeserie in self.timeseries.values():
+            if str(timeserie['_id']) not in self.datasources:
                 # no datasource, create one
                 if timeserie['type'] == 'influxdb':
                     data = {
-                        "name": timeserie['_id'],
+                        "name": str(timeserie['_id']),
                         "type": "influxdb",
                         "typeLogoUrl": "",
                         "access": "proxy",
-                        "url": "http://" + timeserie['address'] + ":" + timeserie['port'],
+                        "url": "http://" + timeserie['address'] + ":" + str(timeserie['port']),
                         "password": timeserie['password'],
                         "user": timeserie['login'],
                         "database": timeserie['database'],
@@ -164,11 +180,11 @@ class Grafana(object):
                     }
                 elif timeserie['type'] == 'graphite':
                     data = {
-                        "name": timeserie['_id'],
+                        "name": str(timeserie['_id']),
                         "type": "graphite",
                         "access": "proxy",
                         "url": "http://" + timeserie['graphite_address'] + ":" +
-                               timeserie['graphite_port'],
+                               str(timeserie['graphite_port']),
                         "basicAuth": False,
                         "basicAuthUser": "",
                         "basicAuthPassword": "",
@@ -180,7 +196,7 @@ class Grafana(object):
                     'http://' + self.host + ':' + self.port + '/api/datasources',
                     json=data, headers=headers)
                 resp = response.json()
-                self.datasources[timeserie['_id']] = resp
+                self.datasources[str(timeserie['_id'])] = resp
 
     def generate_target(self, measurement, tags, refid, mytarget, realm):
         """
@@ -193,6 +209,7 @@ class Grafana(object):
         :return: dictionary / structure of target (cf API Grafana)
         :rtype: dict
         """
+        print("Timeseries....")
         prepare_tags = []
         for key, value in iteritems(tags):
             data = {
@@ -205,7 +222,7 @@ class Grafana(object):
             prepare_tags.append(data)
 
         return {
-            "dsType": self.datasources[realm]['name'],
+            "dsType": self.timeseries[realm]['name'],
             "measurement": measurement,
             "resultFormat": "time_series",
             "policy": "default",

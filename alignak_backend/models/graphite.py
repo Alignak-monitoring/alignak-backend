@@ -37,8 +37,8 @@ def get_schema():
             },
             'carbon_port': {
                 'type': 'integer',
-                'required': True,
                 'empty': False,
+                'default': 2004
             },
             'graphite_address': {
                 'type': 'string',
@@ -47,8 +47,8 @@ def get_schema():
             },
             'graphite_port': {
                 'type': 'integer',
-                'required': True,
                 'empty': False,
+                'default': 8080
             },
             'prefix': {
                 'type': 'string',
