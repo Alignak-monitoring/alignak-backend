@@ -32,6 +32,10 @@ def get_schema():
                 },
                 'required': True,
             },
+            'host_name': {
+                'type': 'string',
+                'regex': '^[^`~!$%^&*"|\'<>?,()=]+$'
+            },
             'service': {
                 'type': 'objectid',
                 'data_relation': {
@@ -40,6 +44,10 @@ def get_schema():
                 },
                 'required': True,
                 'nullable': True
+            },
+            'service_name': {
+                'type': 'string',
+                'regex': '^[^`~!$%^&*"|\'<>?,()=]+$'
             },
             'state': {
                 'type': 'string',

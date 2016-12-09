@@ -83,7 +83,7 @@ class TestActions(unittest2.TestCase):
     @classmethod
     def setUp(cls):
         """
-        Delete resources in backend
+        Create/update resources in backend
 
         :return: None
         """
@@ -125,14 +125,21 @@ class TestActions(unittest2.TestCase):
 
         :return: None
         """
-        for resource in ['host', 'service', 'command', 'history',
+        response = requests.get(cls.endpoint + '/host', auth=cls.auth)
+        resp = response.json()
+        for host in resp['_items']:
+            if host['name'] in ['srv001']:
+                headers = {'If-Match': host['_etag']}
+                response = requests.delete(cls.endpoint + '/host/' + host['_id'],
+                                           headers=headers, auth=cls.auth)
+
+        for resource in ['service', 'command', 'history',
                          'actionacknowledge', 'actiondowntime', 'actionforcecheck']:
             requests.delete(cls.endpoint + '/' + resource, auth=cls.auth)
 
-    def test_action_acknowledge(self):
+    def test_action_acknowledge_host(self):
         # pylint: disable=too-many-locals
-        """
-        Test actions: acknowledge
+        """Test actions: acknowledge host
 
         :return: None
         """
@@ -147,23 +154,19 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 0)
 
-        # Get host in the backend
-        response = requests.get(self.endpoint + '/host', auth=self.auth)
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(rh[0]['name'], "srv001")
-
-        # Get service in the backend
-        response = requests.get(self.endpoint + '/service', auth=self.auth)
-        resp = response.json()
-        rs = resp['_items']
-        self.assertEqual(rs[0]['name'], "ping")
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
 
         # -------------------------------------------
         # Add an acknowledge
         data = {
             "action": "add",
-            "host": rh[0]['_id'],
+            "host": rh[1]['_id'],
             "service": None,
             "sticky": True,
             "persistent": True,
@@ -186,6 +189,8 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 1)
 
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['service'], None)
         self.assertEqual(re[0]['action'], 'add')
         self.assertEqual(re[0]['processed'], False)
         self.assertEqual(re[0]['comment'], "User comment")
@@ -196,8 +201,10 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 1)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
         self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['service_name'], '')
         self.assertEqual(re[0]['type'], "ack.add")
         self.assertEqual(re[0]['message'], "User comment")
 
@@ -205,7 +212,7 @@ class TestActions(unittest2.TestCase):
         # Delete an acknowledge
         data = {
             "action": "delete",
-            "host": rh[0]['_id'],
+            "host": rh[1]['_id'],
             "service": None,
             "user": self.user_admin,
             "comment": "User comment (delete)",
@@ -239,13 +246,17 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 2)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
         self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['service_name'], '')
         self.assertEqual(re[0]['type'], "ack.add")
         self.assertEqual(re[0]['message'], "User comment")
 
-        self.assertEqual(re[1]['host'], rh[0]['_id'])
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
         self.assertEqual(re[1]['service'], None)
+        self.assertEqual(re[1]['service_name'], '')
         self.assertEqual(re[1]['type'], "ack.delete")
         self.assertEqual(re[1]['message'], "User comment (delete)")
 
@@ -267,26 +278,200 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 3)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
         self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['service_name'], '')
         self.assertEqual(re[0]['type'], "ack.add")
         self.assertEqual(re[0]['message'], "User comment")
 
-        self.assertEqual(re[1]['host'], rh[0]['_id'])
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
         self.assertEqual(re[1]['service'], None)
+        self.assertEqual(re[1]['service_name'], '')
         self.assertEqual(re[1]['type'], "ack.delete")
         self.assertEqual(re[1]['message'], "User comment (delete)")
 
         # One more event
-        self.assertEqual(re[2]['host'], rh[0]['_id'])
+        self.assertEqual(re[2]['host'], rh[1]['_id'])
+        self.assertEqual(re[2]['host_name'], rh[1]['name'])
         self.assertEqual(re[2]['service'], None)
+        self.assertEqual(re[2]['service_name'], '')
         self.assertEqual(re[2]['type'], "ack.processed")
         self.assertEqual(re[2]['message'], "User comment")
 
-    def test_action_downtime(self):
+    def test_action_acknowledge_service(self):
         # pylint: disable=too-many-locals
+        """Test actions: acknowledge service
+
+        :return: None
         """
-        Test actions: downtime
+        headers = {'Content-Type': 'application/json'}
+        sort_id = {'sort': '_id'}
+
+        # No existing acknowledges
+        response = requests.get(
+            self.endpoint + '/actionacknowledge', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 0)
+
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
+        resp = response.json()
+        rh = resp['_items']
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
+
+        # Get service in the backend
+        response = requests.get(self.endpoint + '/service', auth=self.auth)
+        resp = response.json()
+        rs = resp['_items']
+        self.assertEqual(rs[0]['name'], "ping")
+
+        # -------------------------------------------
+        # Add an acknowledge
+        data = {
+            "action": "add",
+            "host": rh[1]['_id'],
+            "service": rs[0]['_id'],
+            "sticky": True,
+            "persistent": True,
+            "notify": True,
+            "user": self.user_admin,
+            "comment": "User comment",
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/actionacknowledge', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+        self.assertEqual(resp['_status'], 'OK')
+
+        # Get acknowledge
+        response = requests.get(
+            self.endpoint + '/actionacknowledge', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 1)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['action'], 'add')
+        self.assertEqual(re[0]['processed'], False)
+        self.assertEqual(re[0]['comment'], "User comment")
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 1)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['type'], "ack.add")
+        self.assertEqual(re[0]['message'], "User comment")
+
+        # -------------------------------------------
+        # Delete an acknowledge
+        data = {
+            "action": "delete",
+            "host": rh[1]['_id'],
+            "service": rs[0]['_id'],
+            "user": self.user_admin,
+            "comment": "User comment (delete)",
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/actionacknowledge', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+
+        # Get acknowledge
+        response = requests.get(
+            self.endpoint + '/actionacknowledge', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        ack_id = re[0]['_id']
+        ack_etag = re[0]['_etag']
+        self.assertEqual(len(re), 2)
+
+        self.assertEqual(re[0]['action'], 'add')
+        self.assertEqual(re[0]['processed'], False)
+        self.assertEqual(re[0]['comment'], "User comment")
+        self.assertEqual(re[1]['action'], 'delete')
+        self.assertEqual(re[1]['processed'], False)
+        self.assertEqual(re[1]['comment'], "User comment (delete)")
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 2)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['type'], "ack.add")
+        self.assertEqual(re[0]['message'], "User comment")
+
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
+        self.assertEqual(re[1]['service'], rs[0]['_id'])
+        self.assertEqual(re[1]['service_name'], rs[0]['name'])
+        self.assertEqual(re[1]['type'], "ack.delete")
+        self.assertEqual(re[1]['message'], "User comment (delete)")
+
+        # -------------------------------------------
+        # Update an acknowledge (processed)
+        data = {'processed': True}
+        headers = {
+            'Content-Type': 'application/json',
+            'If-Match': ack_etag
+        }
+        response = requests.patch(self.endpoint + '/actionacknowledge/' + ack_id, json=data,
+                                  headers=headers, auth=self.auth)
+        self.assertEqual(response.status_code, 200)
+        resp = response.json()
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 3)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['type'], "ack.add")
+        self.assertEqual(re[0]['message'], "User comment")
+
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
+        self.assertEqual(re[1]['service'], rs[0]['_id'])
+        self.assertEqual(re[1]['service_name'], rs[0]['name'])
+        self.assertEqual(re[1]['type'], "ack.delete")
+        self.assertEqual(re[1]['message'], "User comment (delete)")
+
+        # One more event
+        self.assertEqual(re[2]['host'], rh[1]['_id'])
+        self.assertEqual(re[2]['host_name'], rh[1]['name'])
+        self.assertEqual(re[2]['service'], rs[0]['_id'])
+        self.assertEqual(re[2]['service_name'], rs[0]['name'])
+        self.assertEqual(re[2]['type'], "ack.processed")
+        self.assertEqual(re[2]['message'], "User comment")
+
+    def test_action_downtime_host(self):
+        # pylint: disable=too-many-locals
+        """Test actions: downtime service
 
         :return: None
         """
@@ -301,20 +486,16 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 0)
 
-        # Get host in the backend
-        response = requests.get(self.endpoint + '/host', auth=self.auth)
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(rh[0]['name'], "srv001")
-
-        # Get service in the backend
-        response = requests.get(self.endpoint + '/service', auth=self.auth)
-        resp = response.json()
-        rs = resp['_items']
-        self.assertEqual(rs[0]['name'], "ping")
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
 
         # -------------------------------------------
-        # Add an downtime
+        # Add a downtime
         now = datetime.utcnow()
         later = now + timedelta(days=2, hours=4, minutes=3, seconds=12)
         now = timegm(now.timetuple())
@@ -322,7 +503,7 @@ class TestActions(unittest2.TestCase):
         print("Now: %s, %s" % (now, later))
         data = {
             "action": "add",
-            "host": rh[0]['_id'],
+            "host": rh[1]['_id'],
             "service": None,
             "start_time": now,
             "end_time": later,
@@ -357,16 +538,18 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 1)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
         self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['service_name'], '')
         self.assertEqual(re[0]['type'], "downtime.add")
         self.assertEqual(re[0]['message'], "User comment")
 
         # -------------------------------------------
-        # Delete an downtime
+        # Delete a downtime
         data = {
             "action": "delete",
-            "host": rh[0]['_id'],
+            "host": rh[1]['_id'],
             "service": None,
             "user": self.user_admin,
             "comment": "User comment (delete)",
@@ -391,6 +574,7 @@ class TestActions(unittest2.TestCase):
         self.assertEqual(re[0]['action'], 'add')
         self.assertEqual(re[0]['processed'], False)
         self.assertEqual(re[0]['comment'], "User comment")
+
         self.assertEqual(re[1]['action'], 'delete')
         self.assertEqual(re[1]['processed'], False)
         self.assertEqual(re[1]['comment'], "User comment (delete)")
@@ -401,13 +585,17 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 2)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
         self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['service_name'], '')
         self.assertEqual(re[0]['type'], "downtime.add")
         self.assertEqual(re[0]['message'], "User comment")
 
-        self.assertEqual(re[1]['host'], rh[0]['_id'])
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
         self.assertEqual(re[1]['service'], None)
+        self.assertEqual(re[1]['service_name'], '')
         self.assertEqual(re[1]['type'], "downtime.delete")
         self.assertEqual(re[1]['message'], "User comment (delete)")
 
@@ -430,26 +618,208 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 3)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
         self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['service_name'], '')
         self.assertEqual(re[0]['type'], "downtime.add")
         self.assertEqual(re[0]['message'], "User comment")
 
-        self.assertEqual(re[1]['host'], rh[0]['_id'])
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
         self.assertEqual(re[1]['service'], None)
+        self.assertEqual(re[1]['service_name'], '')
         self.assertEqual(re[1]['type'], "downtime.delete")
         self.assertEqual(re[1]['message'], "User comment (delete)")
 
         # One more event
-        self.assertEqual(re[2]['host'], rh[0]['_id'])
+        self.assertEqual(re[2]['host'], rh[1]['_id'])
+        self.assertEqual(re[2]['host_name'], rh[1]['name'])
         self.assertEqual(re[2]['service'], None)
+        self.assertEqual(re[2]['service_name'], '')
         self.assertEqual(re[2]['type'], "downtime.processed")
         self.assertEqual(re[2]['message'], "User comment")
 
-    def test_action_forcecheck(self):
+    def test_action_downtime_service(self):
         # pylint: disable=too-many-locals
+        """Test actions: downtime service
+
+        :return: None
         """
-        Test actions: forcecheck
+        headers = {'Content-Type': 'application/json'}
+        sort_id = {'sort': '_id'}
+
+        # No existing downtimes
+        response = requests.get(
+            self.endpoint + '/actiondowntime', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 0)
+
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
+        resp = response.json()
+        rh = resp['_items']
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
+
+        # Get service in the backend
+        response = requests.get(self.endpoint + '/service', auth=self.auth)
+        resp = response.json()
+        rs = resp['_items']
+        self.assertEqual(rs[0]['name'], "ping")
+
+        # -------------------------------------------
+        # Add a downtime
+        now = datetime.utcnow()
+        later = now + timedelta(days=2, hours=4, minutes=3, seconds=12)
+        now = timegm(now.timetuple())
+        later = timegm(later.timetuple())
+        print("Now: %s, %s" % (now, later))
+        data = {
+            "action": "add",
+            "host": rh[1]['_id'],
+            "service": rs[0]['_id'],
+            "start_time": now,
+            "end_time": later,
+            "fixed": True,
+            "user": self.user_admin,
+            "comment": "User comment",
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/actiondowntime', json=data, headers=headers, auth=self.auth
+        )
+        print(response)
+        resp = response.json()
+        print(resp)
+        self.assertEqual(resp['_status'], 'OK')
+
+        # Get downtime
+        response = requests.get(
+            self.endpoint + '/actiondowntime', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 1)
+
+        self.assertEqual(re[0]['action'], 'add')
+        self.assertEqual(re[0]['processed'], False)
+        self.assertEqual(re[0]['comment'], "User comment")
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 1)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['type'], "downtime.add")
+        self.assertEqual(re[0]['message'], "User comment")
+
+        # -------------------------------------------
+        # Delete a downtime
+        data = {
+            "action": "delete",
+            "host": rh[1]['_id'],
+            "service": rs[0]['_id'],
+            "user": self.user_admin,
+            "comment": "User comment (delete)",
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/actiondowntime', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+        print(resp)
+
+        # Get downtime
+        response = requests.get(
+            self.endpoint + '/actiondowntime', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        dwn_id = re[0]['_id']
+        dwn_etag = re[0]['_etag']
+        self.assertEqual(len(re), 2)
+
+        self.assertEqual(re[0]['action'], 'add')
+        self.assertEqual(re[0]['processed'], False)
+        self.assertEqual(re[0]['comment'], "User comment")
+
+        self.assertEqual(re[1]['action'], 'delete')
+        self.assertEqual(re[1]['processed'], False)
+        self.assertEqual(re[1]['comment'], "User comment (delete)")
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 2)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['type'], "downtime.add")
+        self.assertEqual(re[0]['message'], "User comment")
+
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
+        self.assertEqual(re[1]['service'], rs[0]['_id'])
+        self.assertEqual(re[1]['service_name'], rs[0]['name'])
+        self.assertEqual(re[1]['type'], "downtime.delete")
+        self.assertEqual(re[1]['message'], "User comment (delete)")
+
+        # -------------------------------------------
+        # Update a downtime (processed)
+        data = {'processed': True}
+        headers = {
+            'Content-Type': 'application/json',
+            'If-Match': dwn_etag
+        }
+        print("Downtime: %s" % self.endpoint + '/actiondowntime/' + dwn_id)
+        response = requests.patch(self.endpoint + '/actiondowntime/' + dwn_id, json=data,
+                                  headers=headers, auth=self.auth)
+        # self.assertEqual(response.status_code, 200)
+        resp = response.json()
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 3)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['type'], "downtime.add")
+        self.assertEqual(re[0]['message'], "User comment")
+
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
+        self.assertEqual(re[1]['service'], rs[0]['_id'])
+        self.assertEqual(re[1]['service_name'], rs[0]['name'])
+        self.assertEqual(re[1]['type'], "downtime.delete")
+        self.assertEqual(re[1]['message'], "User comment (delete)")
+
+        # One more event
+        self.assertEqual(re[2]['host'], rh[1]['_id'])
+        self.assertEqual(re[2]['host_name'], rh[1]['name'])
+        self.assertEqual(re[2]['service'], rs[0]['_id'])
+        self.assertEqual(re[2]['service_name'], rs[0]['name'])
+        self.assertEqual(re[2]['type'], "downtime.processed")
+        self.assertEqual(re[2]['message'], "User comment")
+
+    def test_action_forcecheck_host(self):
+        # pylint: disable=too-many-locals
+        """Test actions: forcecheck service
 
         :return: None
         """
@@ -464,22 +834,18 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 0)
 
-        # Get host in the backend
-        response = requests.get(self.endpoint + '/host', auth=self.auth)
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(rh[0]['name'], "srv001")
-
-        # Get service in the backend
-        response = requests.get(self.endpoint + '/service', auth=self.auth)
-        resp = response.json()
-        rs = resp['_items']
-        self.assertEqual(rs[0]['name'], "ping")
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
 
         # -------------------------------------------
         # Add a forcecheck
         data = {
-            "host": rh[0]['_id'],
+            "host": rh[1]['_id'],
             "service": None,
             "user": self.user_admin,
             "comment": "User comment",
@@ -510,7 +876,7 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 1)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
         self.assertEqual(re[0]['service'], None)
         self.assertEqual(re[0]['type'], "check.request")
         self.assertEqual(re[0]['message'], "User comment")
@@ -533,13 +899,119 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 2)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
         self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['service_name'], '')
         self.assertEqual(re[0]['type'], "check.request")
         self.assertEqual(re[0]['message'], "User comment")
 
-        self.assertEqual(re[1]['host'], rh[0]['_id'])
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
         self.assertEqual(re[1]['service'], None)
+        self.assertEqual(re[1]['service_name'], '')
+        self.assertEqual(re[1]['type'], "check.requested")
+        self.assertEqual(re[1]['message'], "User comment")
+
+    def test_action_forcecheck_service(self):
+        # pylint: disable=too-many-locals
+        """Test actions: forcecheck service
+
+        :return: None
+        """
+        headers = {'Content-Type': 'application/json'}
+        sort_id = {'sort': '_id'}
+
+        # No existing forcechecks
+        response = requests.get(
+            self.endpoint + '/actionforcecheck', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 0)
+
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
+        resp = response.json()
+        rh = resp['_items']
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
+
+        # Get service in the backend
+        response = requests.get(self.endpoint + '/service', auth=self.auth)
+        resp = response.json()
+        rs = resp['_items']
+        self.assertEqual(rs[0]['name'], "ping")
+
+        # -------------------------------------------
+        # Add a forcecheck
+        data = {
+            "host": rh[1]['_id'],
+            "service": rs[0]['_id'],
+            "user": self.user_admin,
+            "comment": "User comment",
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/actionforcecheck', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+        self.assertEqual(resp['_status'], 'OK')
+
+        # Get forcecheck
+        response = requests.get(
+            self.endpoint + '/actionforcecheck', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        fck_id = re[0]['_id']
+        fck_etag = re[0]['_etag']
+        self.assertEqual(len(re), 1)
+
+        self.assertEqual(re[0]['processed'], False)
+        self.assertEqual(re[0]['comment'], "User comment")
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 1)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['type'], "check.request")
+        self.assertEqual(re[0]['message'], "User comment")
+
+        # -------------------------------------------
+        # Update an forcecheck (processed)
+        data = {'processed': True}
+        headers = {
+            'Content-Type': 'application/json',
+            'If-Match': fck_etag
+        }
+        response = requests.patch(self.endpoint + '/actionforcecheck/' + fck_id, json=data,
+                                  headers=headers, auth=self.auth)
+        self.assertEqual(response.status_code, 200)
+        resp = response.json()
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 2)
+
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['type'], "check.request")
+        self.assertEqual(re[0]['message'], "User comment")
+
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[1]['name'])
+        self.assertEqual(re[1]['service'], rs[0]['_id'])
+        self.assertEqual(re[1]['service_name'], rs[0]['name'])
         self.assertEqual(re[1]['type'], "check.requested")
         self.assertEqual(re[1]['message'], "User comment")
 
@@ -560,11 +1032,13 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 0)
 
-        # Get host in the backend
-        response = requests.get(self.endpoint + '/host', auth=self.auth)
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(rh[0]['name'], "srv001")
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
 
         # Get service in the backend
         response = requests.get(self.endpoint + '/service', auth=self.auth)
@@ -575,8 +1049,8 @@ class TestActions(unittest2.TestCase):
         # -------------------------------------------
         # Add an history comment
         data = {
-            "host": rh[0]['_id'],
-            "service": None,
+            "host": rh[1]['_id'],
+            "service": rs[0]['_id'],
             "user": self.user_admin,
             "type": "webui.comment",
             "message": "User comment",
@@ -594,7 +1068,45 @@ class TestActions(unittest2.TestCase):
         re = resp['_items']
         self.assertEqual(len(re), 1)
 
-        self.assertEqual(re[0]['host'], rh[0]['_id'])
-        self.assertEqual(re[0]['service'], None)
+        self.assertEqual(re[0]['host'], rh[1]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['user'], self.user_admin)
+        self.assertEqual(re[0]['user_name'], 'admin')
         self.assertEqual(re[0]['type'], "webui.comment")
         self.assertEqual(re[0]['message'], "User comment")
+        self.assertEqual(re[0]['_realm'], self.realm_all)
+
+        # -------------------------------------------
+        # Add an history comment - host_name, service_name and user_name
+        data = {
+            "host_name": rh[0]['name'],
+            "service_name": rs[0]['name'],
+            "user_name": "admin",
+            "type": "webui.comment",
+            "message": "User comment 2",
+        }
+        response = requests.post(
+            self.endpoint + '/history', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+        self.assertEqual(resp['_status'], 'OK')
+
+        # Get history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 2)
+        print("History 0: %s" % re[0])
+        print("History 1: %s" % re[1])
+
+        self.assertEqual(re[1]['host'], rh[0]['_id'])
+        self.assertEqual(re[1]['host_name'], rh[0]['name'])
+        self.assertEqual(re[1]['service'], rs[0]['_id'])
+        self.assertEqual(re[1]['service_name'], rs[0]['name'])
+        self.assertEqual(re[1]['user'], self.user_admin)
+        self.assertEqual(re[1]['user_name'], 'admin')
+        self.assertEqual(re[1]['type'], "webui.comment")
+        self.assertEqual(re[1]['message'], "User comment 2")
+        self.assertEqual(re[1]['_realm'], self.realm_all)

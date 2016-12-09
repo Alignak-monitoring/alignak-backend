@@ -408,7 +408,7 @@ def get_schema():
             },
             'location': {
                 'type': 'point',
-                'default': {"type": "Point", "coordinates": [100.0, 10.0]}
+                'default': {"type": "Point", "coordinates": [46.3613628, 6.5394704]}
             },
             # Host live state fields are prefixed with ls_
             # Make this field consistent with the initial_state...
