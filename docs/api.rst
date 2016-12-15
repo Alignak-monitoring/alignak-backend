@@ -254,12 +254,6 @@ The endpoint to delete an item of a resource is::
     http://127.0.0.1:5000/service/55dc773a6376e90ac95f836f
 
 
-More info about API
--------------------
-
-When the Alignak Backend is running, it exists an endpoint with the API documentation::
-
-    http://127.0.0.1:5000/docs
 
 Rights management
 -----------------
@@ -320,35 +314,32 @@ How to  use templates
 Resources use template system
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The resources use the template system are:
+The resources using the backend template system are:
 
-* host
-* service
+   * host
+   * service
 
 
 Use simple template system
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To use simple system of template, create an template object (*host* or *service*) with these fields:
+To use the simple templating system, you just need to create a template object (*host* or *service*) with these fields:
 
-* *_is_template*: True
+   * *_is_template*: True
 
+It is as simple as creating an *host* and you just need to add *_is_template = True* in the provided data.
 
-For *service* resource, you need link it to host, so link to a host template.
+For a *service* template, you need link it to an host, so link it to an host template.
 
-To add a new object (*host* or *service*) with use of the template object, create this standard
-object with fields:
+To add a new object (*host* or *service*) linked to one of the template objects, create the object (host/service) with those fields:
 
-* *_templates*: [*id_of_template*]
+   * *_templates*: [*id_of_template*]
 
-You can add more than 1 template.
+You can link an object to more than one template.
 
+When adding the object, if we define for example a field *notification_period*, this field will not be erased by the template(s) field
 
-When we add our object, if we define for example a field *notification_period*, this field will
-not be erased by the template(s) field
-
-In case you modify one field of the template, the backend will report the value to all objects use
-this template
+In case you modify one field of the template, the backend will report the value to all objects use this template
 
 
 Complex template system
