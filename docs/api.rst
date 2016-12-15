@@ -3,31 +3,31 @@
 Developer Interface
 ===================
 
-This part of the documentation is related to REST API used to interact with this backend.
-The examples in this part of documentation use :
+This part of the documentation is related to the REST API used to interact with this backend.
+The examples in this part of the documentation use :
 
-* IP as 127.0.0.1
-* a resource name as service
+   * IP as 127.0.0.1
+   * a resource name as service
 
-Get all available resources
----------------------------
+Browse Alignak backend API (Swagger)
+------------------------------------
 
-All resources available in the backend are listed on the root endpoint of the backend::
+The Alignak backend API can be browsed with a Web Browser on this URL::
 
-    http://127.0.0.1:5000
+    http://127.0.0.1:5000/docs
+
+This URL is served by the Swagger UI embedded into the Alignak backend.
 
 
 Authentication in the backend
 -----------------------------
 
-The backend needs an authentication.
+The backend API needs an authentication for each request. Some user accounts are defined with *username*, *password* and *token*.
 
-There are user accounts defined with *username*, *password* and *token*
+To access any backend enpoint, you need to provide the *token* associated to the user account.
 
-To access the backend enpoints, you need to provide the *token* associated to your account.
-
-Get the token
-~~~~~~~~~~~~~
+Get the authentication token
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 POST on *http://127.0.0.1:5000/login* with fields:
 
@@ -72,6 +72,14 @@ You can use *basic auth*: use the token as a username and set password as empty.
 
 GET method (get)
 ----------------
+
+Get all available enpoints
+--------------------------
+
+All resources available in the backend are listed on the root endpoint of the backend::
+
+    http://127.0.0.1:5000
+
 
 All items
 ~~~~~~~~~
