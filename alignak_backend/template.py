@@ -153,18 +153,18 @@ class Template(object):
         service_db = current_app.data.driver.db['service']
         for _, item in enumerate(items):
             if item['_templates'] != [] and item['_templates_with_services']:
-                # add services
+                # Try to add services
                 services = {}
-                # loop on host templates and add into services the service are templates
+                # loop on host templates and collect services that are templates
                 for hostid in item['_templates']:
-                    services_template = service_db.find({'_is_template': True,
-                                                         'host': hostid})
+                    services_template = service_db.find({'_is_template': True, 'host': hostid})
                     for srv in services_template:
-                        services[srv['name']] = Template.prepare_service_to_post(srv,
-                                                                                 item[
-                                                                                     '_id'])
-                # when ok, add all services to this host
-                post_internal('service', [services[k] for k in services])
+                        services[srv['name']] = Template.prepare_service_to_post(srv, item['_id'])
+
+                # when ok, and if some exist, add all services to this host
+                template_services = [services[k] for k in services]
+                if template_services:
+                    post_internal('service', template_services)
 
     @staticmethod
     def on_inserted_service(items):
