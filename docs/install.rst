@@ -19,10 +19,10 @@ As an excerpt of the MongoDB installation documentation, this script will instal
     sudo service mongod start
 
 
-.. warning:: Check for you specific Unix/Linux distribution in the `MongoDB_` installation documentation.
+.. warning:: Check for your specific Unix/Linux distribution in the `MongoDB_` installation documentation.
 
 
-If you want to run with uwsgi, you need to install uwsgi and plugin python (on Debian)::
+If you want to run with uwsgi, you need to install uwsgi and its python plugin (on Debian)::
 
     sudo apt-get install uwsgi uwsgi-plugin-python
 
