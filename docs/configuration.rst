@@ -102,14 +102,14 @@ To store the metrics, we need to configure Carbon/Graphite or/and InfluxDB.
 
 For Carbon/Graphite::
 
-    "GRAPHITE_HOST": null,
+    "GRAPHITE_HOST": "",
     "GRAPHITE_PORT": 8080,
-    "CARBON_HOST": null,
+    "CARBON_HOST": "",
     "CARBON_PORT": 2004,
 
 For InfluxDB::
 
-  "INFLUXDB_HOST": null,
+  "INFLUXDB_HOST": "",
   "INFLUXDB_PORT": 8086,
   "INFLUXDB_DATABASE": "alignak",
   "INFLUXDB_LOGIN": "admin",
@@ -136,7 +136,7 @@ For that, activate it::
 
 Define the hostname and port of Grafana::
 
-    "GRAFANA_HOST": null,
+    "GRAFANA_HOST": "",
     "GRAFANA_PORT": 3000,
 
 Create an API KEY in Grafana with right *admin* and put it in configuration file::
