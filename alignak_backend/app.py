@@ -221,11 +221,14 @@ def pre_get(resource, user_request, lookup):
                 resources_get_parents[resource] = []
             if resource not in resources_get_custom:
                 resources_get_custom[resource] = []
-            lookup['$or'] = [{'_realm': {'$in': resources_get[resource]}},
-                             {'$and': [{'_sub_realm': True},
-                                       {'_realm': {'$in': resources_get_parents[resource]}}]},
-                             {'$and': [{'_users_read': users_id},
-                                       {'_realm': {'$in': resources_get_custom[resource]}}]}]
+            if resource in ['realm']:
+                lookup['$or'] = [{'_id': {'$in': resources_get[resource]}}]
+            else:
+                lookup['$or'] = [{'_realm': {'$in': resources_get[resource]}},
+                                 {'$and': [{'_sub_realm': True},
+                                           {'_realm': {'$in': resources_get_parents[resource]}}]},
+                                 {'$and': [{'_users_read': users_id},
+                                           {'_realm': {'$in': resources_get_custom[resource]}}]}]
 
 
 # History
