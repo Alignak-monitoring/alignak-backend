@@ -149,6 +149,10 @@ def get_schema():
                 },
                 'nullable': True
             },
+            'event_handler_args': {
+                'type': 'string',
+                'default': ''
+            },
             'event_handler_enabled': {
                 'type': 'boolean',
                 'default': False
