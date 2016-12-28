@@ -113,39 +113,10 @@ class TestUserrestrict(unittest2.TestCase):
         # Check if command right in backend
         response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
         resp = response.json()
-        self.assertEqual(len(resp['_items']), 1)
-        self.assertEqual(resp['_items'][0]['name'], "ping1")
+        self.assertEqual(len(resp['_items']), 3)
+        self.assertEqual(resp['_items'][2]['name'], "ping1")
 
         response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth_user1)
         resp = response.json()
-        self.assertEqual(len(resp['_items']), 1)
-        self.assertEqual(resp['_items'][0]['name'], "ping1")
-
-    def test_userrestrict_uipref(self):
-        """
-        Test have userrestrict on uipref resource
-
-        :return: None
-        """
-        headers = {'Content-Type': 'application/json'}
-        sort_id = {'sort': '_id'}
-        data = {
-            "type": "test1",
-            "user": "admin"
-        }
-        requests.post(self.endpoint + '/uipref', json=data, headers=headers, auth=self.auth)
-        data = {
-            "type": "test1",
-            "user": "user1"
-        }
-        requests.post(self.endpoint + '/uipref', json=data, headers=headers, auth=self.auth_user1)
-
-        response = requests.get(self.endpoint + '/uipref', params=sort_id, auth=self.auth)
-        resp = response.json()
-        self.assertEqual(len(resp['_items']), 1)
-        self.assertEqual(resp['_items'][0]['user'], "admin")
-
-        response = requests.get(self.endpoint + '/uipref', params=sort_id, auth=self.auth_user1)
-        resp = response.json()
-        self.assertEqual(len(resp['_items']), 1)
-        self.assertEqual(resp['_items'][0]['user'], "user1")
+        self.assertEqual(len(resp['_items']), 3)
+        self.assertEqual(resp['_items'][2]['name'], "ping1")

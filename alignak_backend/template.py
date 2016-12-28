@@ -189,7 +189,7 @@ class Template(object):
                 hosts = host_db.find(
                     {'_templates': hostid, '_templates_with_services': True})
                 for hs in hosts:
-                    services.append(Template.prepare_service_to_post(item, hs['_id']))
+                    services.append(Template.prepare_service_to_post(deepcopy(item), hs['_id']))
         if services != []:
             post_internal('service', services)
 

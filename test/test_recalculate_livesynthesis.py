@@ -90,11 +90,11 @@ class TestRecalculateLivesynthesis(unittest2.TestCase):
         response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
         resp = response.json()
         rc = resp['_items']
-        self.assertEqual(rc[0]['name'], "ping")
+        self.assertEqual(rc[2]['name'], "ping")
 
         # Add host template
         data = json.loads(open('cfg/host_template.json').read())
-        data['check_command'] = rc[0]['_id']
+        data['check_command'] = rc[2]['_id']
         if 'realm' in data:
             del data['realm']
         data['_realm'] = self.realm_all
@@ -103,11 +103,11 @@ class TestRecalculateLivesynthesis(unittest2.TestCase):
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertTrue(rh[0]['_is_template'])
+        self.assertTrue(rh[1]['_is_template'])
 
         # Add host
         data = json.loads(open('cfg/host_srv001.json').read())
-        data['check_command'] = rc[0]['_id']
+        data['check_command'] = rc[2]['_id']
         if 'realm' in data:
             del data['realm']
         data['_realm'] = self.realm_all
@@ -116,12 +116,12 @@ class TestRecalculateLivesynthesis(unittest2.TestCase):
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertFalse(rh[1]['_is_template'])
+        self.assertFalse(rh[2]['_is_template'])
 
         # Add service
         data = json.loads(open('cfg/service_srv001_ping.json').read())
-        data['host'] = rh[1]['_id']
-        data['check_command'] = rc[0]['_id']
+        data['host'] = rh[2]['_id']
+        data['check_command'] = rc[1]['_id']
         data['_realm'] = self.realm_all
         requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
         # Check if service right in backend

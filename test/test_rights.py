@@ -180,7 +180,7 @@ class TestRights(unittest2.TestCase):
         # Check if command right in backend
         response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
         resp = response.json()
-        self.assertEqual(resp['_items'][0]['name'], "ping1")
+        self.assertEqual(resp['_items'][2]['name'], "ping1")
 
         data['_sub_realm'] = False
         data['name'] = 'ping2'
@@ -236,14 +236,14 @@ class TestRights(unittest2.TestCase):
         response = requests.get(self.endpoint + '/command', params={'sort': "name"},
                                 auth=user1_auth)
         resp = response.json()
-        self.assertEqual(len(resp['_items']), 3)
-        self.assertEqual(resp['_meta']['total'], 3)
+        self.assertEqual(len(resp['_items']), 5)
+        self.assertEqual(resp['_meta']['total'], 5)
 
         response = requests.get(self.endpoint + '/command', params={'sort': "name"},
                                 auth=user2_auth)
         resp = response.json()
-        self.assertEqual(len(resp['_items']), 2)
-        self.assertEqual(resp['_meta']['total'], 2)
+        self.assertEqual(len(resp['_items']), 4)
+        self.assertEqual(resp['_meta']['total'], 4)
 
         response = requests.get(self.endpoint + '/command', params={'sort': "name"},
                                 auth=user3_auth)
@@ -260,5 +260,5 @@ class TestRights(unittest2.TestCase):
         response = requests.get(self.endpoint + '/command', params={'sort': "name"},
                                 auth=user5_auth)
         resp = response.json()
-        self.assertEqual(len(resp['_items']), 2)
-        self.assertEqual(resp['_meta']['total'], 2)
+        self.assertEqual(len(resp['_items']), 4)
+        self.assertEqual(resp['_meta']['total'], 4)
