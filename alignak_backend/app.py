@@ -289,6 +289,64 @@ def pre_history_post(items):
             item['user'] = None
 
 
+# History
+def pre_history_post(items):
+    """
+    Hook before adding new history element
+
+    If host _id is not provided, search for an host with host_name. Same for service and user.
+
+    :param items: history fields
+    :type items: dict
+    :return: None
+    """
+    hosts_drv = current_app.data.driver.db['host']
+    services_drv = current_app.data.driver.db['service']
+    users_drv = current_app.data.driver.db['user']
+    for dummy, item in enumerate(items):
+        if 'host' in item and item['host']:
+            host = hosts_drv.find_one({'_id': item['host']})
+            if host:
+                item['host_name'] = host['name']
+            else:
+                continue
+        elif 'host_name' in item and item['host_name']:
+            host = hosts_drv.find_one({'name': item['host_name']})
+            if host:
+                item['host'] = host['_id']
+            else:
+                continue
+        else:
+            continue
+
+        host = hosts_drv.find_one({'_id': item['host']})
+        # Set _realm as host's _realm
+        item['_realm'] = host['_realm']
+
+        # Find service and service_name
+        if 'service' in item and item['service']:
+            service = services_drv.find_one({'_id': item['service']})
+            if service:
+                item['service_name'] = service['name']
+        elif 'service_name' in item and item['service_name']:
+            service = services_drv.find_one({'host': item['host'], 'name': item['service_name']})
+            if service:
+                item['service'] = service['_id']
+
+        # Find user and user_name
+        if 'user' in item and item['user']:
+            user = users_drv.find_one({'_id': item['user']})
+            if user:
+                item['user_name'] = user['name']
+        elif 'user_name' in item and item['user_name']:
+            user = users_drv.find_one({'name': item['user_name']})
+            if user:
+                item['user'] = user['_id']
+        else:
+            item['user_name'] = 'Alignak'
+            item['user'] = None
+
+
 # Log checks results
 def pre_logcheckresult_post(items):
     """
