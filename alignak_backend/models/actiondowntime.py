@@ -26,7 +26,7 @@ def get_schema():
         'schema': {
             'action': {
                 'type': 'string',
-                'default': 'OK',
+                'default': 'add',
                 'allowed': ["add", "delete"]
             },
             'host': {

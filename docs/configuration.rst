@@ -149,4 +149,3 @@ The default values for the dashboards::
     "timezone": "browser",
     "refresh": "1m"
   }
-

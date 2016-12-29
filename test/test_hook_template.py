@@ -499,11 +499,11 @@ class TestHookTemplate(unittest2.TestCase):
         response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
         resp = response.json()
         rc = resp['_items']
-        self.assertEqual(len(rc), 4)
-        self.assertEqual(rc[0]['name'], "ping")
-        self.assertEqual(rc[1]['name'], "http")
-        self.assertEqual(rc[2]['name'], "https")
-        self.assertEqual(rc[3]['name'], "ssh")
+        self.assertEqual(len(rc), 6)
+        self.assertEqual(rc[2]['name'], "ping")
+        self.assertEqual(rc[3]['name'], "http")
+        self.assertEqual(rc[4]['name'], "https")
+        self.assertEqual(rc[5]['name'], "ssh")
 
         # Add host templates
         data = json.loads(open('cfg/host_srv001.json').read())
@@ -520,15 +520,19 @@ class TestHookTemplate(unittest2.TestCase):
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(len(rh), 2)
-        self.assertEqual(rh[0]['name'], "template_standard_linux")
-        self.assertEqual(rh[1]['name'], "template_web")
+        self.assertEqual(len(rh), 3)
+        self.assertEqual(rh[1]['name'], "template_standard_linux")
+        self.assertEqual(rh[2]['name'], "template_web")
+        # ~~~ Now we have hosts ~~~
+        # * 0: _dummy
+        # * 1: template_standard_linux
+        # * 2: template_web
 
         # Add services templates
         data = {
             'name': 'ping',
-            'host': rh[0]['_id'],
-            'check_command': rc[0]['_id'],
+            'host': rh[1]['_id'],
+            'check_command': rc[1]['_id'],
             'business_impact': 4,
             '_is_template': True,
             '_realm': self.realm_all
@@ -538,7 +542,7 @@ class TestHookTemplate(unittest2.TestCase):
         data['check_command'] = rc[3]['_id']
         requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
         data['name'] = 'http'
-        data['host'] = rh[1]['_id']
+        data['host'] = rh[2]['_id']
         data['check_command'] = rc[1]['_id']
         requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
         data['name'] = 'https'
@@ -552,23 +556,45 @@ class TestHookTemplate(unittest2.TestCase):
         self.assertEqual(rs[1]['name'], "ssh")
         self.assertEqual(rs[2]['name'], "http")
         self.assertEqual(rs[3]['name'], "https")
+        # ~~~ Now we have services ~~~
+        # * 0: ping
+        # * 1: ssh
+        # * 2: http
+        # * 3: https
 
         # add a host with host template + allow service templates
         data = {
             'name': 'host_001',
-            '_templates': [rh[0]['_id'], rh[1]['_id']],
+            '_templates': [rh[1]['_id'], rh[2]['_id']],
             '_templates_with_services': True,
             '_realm': self.realm_all
         }
         requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
+        # add a second host with host template + allow service templates
+        data = {
+            'name': 'host_002',
+            '_templates': [rh[1]['_id'], rh[2]['_id']],
+            '_templates_with_services': True,
+            '_realm': self.realm_all
+        }
+        requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
+
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(rh[2]['name'], "host_001")
+        self.assertEqual(rh[3]['name'], "host_001")
+        self.assertEqual(rh[4]['name'], "host_002")
+        # ~~~ Now we have hosts ~~~
+        # * 0: _dummy
+        # * 1: template_standard_linux
+        # * 2: template_web
+        # * 3: host_001
+        # * 4: host_002
+
         response = requests.get(self.endpoint + '/service', params=sort_id, auth=self.auth)
         resp = response.json()
         rs = resp['_items']
-        self.assertEqual(len(rs), 8)
+        self.assertEqual(len(rs), 12)
         ref = [
             {
                 'name': 'http',
@@ -585,6 +611,22 @@ class TestHookTemplate(unittest2.TestCase):
             {
                 'name': 'https',
                 '_is_template': True
+            },
+            {
+                'name': 'http',
+                '_is_template': False
+            },
+            {
+                'name': 'ping',
+                '_is_template': False
+            },
+            {
+                'name': 'ssh',
+                '_is_template': False
+            },
+            {
+                'name': 'https',
+                '_is_template': False
             },
             {
                 'name': 'http',
@@ -632,46 +674,47 @@ class TestHookTemplate(unittest2.TestCase):
         self.assertEqual(rs[ping_db_template]['name'], "ping2")
         self.assertEqual(rs[ping_db_nottemplate]['name'], "ping2")
 
-        # Now remove the template template_web of the host
-        data = {'_templates': [rh[0]['_id']]}
+        # Now remove the host template template_web of the host host_001
+        data = {'_templates': [rh[1]['_id']]}
         headers_patch = {
             'Content-Type': 'application/json',
-            'If-Match': rh[2]['_etag']
+            'If-Match': rh[3]['_etag']
         }
-        requests.patch(self.endpoint + '/host/' + rh[2]['_id'], json=data, headers=headers_patch,
+        requests.patch(self.endpoint + '/host/' + rh[3]['_id'], json=data, headers=headers_patch,
                        auth=self.auth)
 
         response = requests.get(self.endpoint + '/service', params=sort_id, auth=self.auth)
         resp = response.json()
         rs = resp['_items']
-        self.assertEqual(len(rs), 6)
+        self.assertEqual(len(rs), 10)
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(rh[2]['_templates'], [rh[0]['_id']])
+        self.assertEqual(rh[3]['_templates'], [rh[1]['_id']])
+        self.assertEqual(rh[4]['_templates'], [rh[1]['_id'], rh[2]['_id']])
 
         # Now re-add the template template_web of host
-        data = {'_templates': [rh[0]['_id'], rh[1]['_id']]}
+        data = {'_templates': [rh[1]['_id'], rh[2]['_id']]}
         headers_patch = {
             'Content-Type': 'application/json',
-            'If-Match': rh[2]['_etag']
+            'If-Match': rh[3]['_etag']
         }
-        requests.patch(self.endpoint + '/host/' + rh[2]['_id'], json=data,
-                       headers=headers_patch, auth=self.auth)
+        requests.patch(self.endpoint + '/host/' + rh[3]['_id'], json=data, headers=headers_patch,
+                       auth=self.auth)
 
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(rh[2]['_templates'], [rh[0]['_id'], rh[1]['_id']])
+        self.assertEqual(rh[3]['_templates'], [rh[1]['_id'], rh[2]['_id']])
         response = requests.get(self.endpoint + '/service', params=sort_id, auth=self.auth)
         resp = response.json()
         rs = resp['_items']
-        self.assertEqual(len(rs), 8)
+        self.assertEqual(len(rs), 12)
 
         # Now add a new template service
         data = {
             'name': 'ssh_new_method',
-            'host': rh[0]['_id'],
+            'host': rh[1]['_id'],
             'check_command': rc[0]['_id'],
             'business_impact': 4,
             '_is_template': True,
@@ -685,11 +728,13 @@ class TestHookTemplate(unittest2.TestCase):
         resp = response.json()
         rs = resp['_items']
 
-        self.assertEqual(len(rs), 10)
-        self.assertEqual(rs[9]['_templates'][0], ret_new['_id'])
-        self.assertFalse(rs[9]['_is_template'])
-        self.assertEqual(rs[8]['_templates'], [])
-        self.assertTrue(rs[8]['_is_template'])
+        self.assertEqual(len(rs), 15)
+        self.assertEqual(rs[14]['_templates'][0], ret_new['_id'])
+        self.assertFalse(rs[14]['_is_template'])
+        self.assertEqual(rs[13]['_templates'][0], ret_new['_id'])
+        self.assertFalse(rs[13]['_is_template'])
+        self.assertEqual(rs[12]['_templates'], [])
+        self.assertTrue(rs[12]['_is_template'])
 
         # Now delete a template service
         headers_delete = {
@@ -703,6 +748,7 @@ class TestHookTemplate(unittest2.TestCase):
         service_name = []
         for serv in resp['_items']:
             service_name.append(serv['name'])
-        self.assertEqual(len(resp['_items']), 8)
-        self.assertItemsEqual(['ping2', 'ssh', 'http', 'https', 'ping2', 'ssh', 'http', 'https'],
+        self.assertEqual(len(resp['_items']), 12)
+        self.assertItemsEqual(['ping2', 'ssh', 'http', 'https', 'ping2', 'ssh', 'http', 'https',
+                               'ping2', 'ssh', 'http', 'https'],
                               service_name)

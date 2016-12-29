@@ -151,6 +151,20 @@ class TestRights(unittest2.TestCase):
         requests.post(cls.endpoint + '/userrestrictrole', json=data, headers=headers,
                       auth=cls.auth)
 
+        # User 6
+        data = {'name': 'user6', 'password': 'test', 'back_role_super_admin': False,
+                'host_notification_period': cls.user_admin['host_notification_period'],
+                'service_notification_period': cls.user_admin['service_notification_period'],
+                '_realm': cls.realmAll_id}
+        response = requests.post(cls.endpoint + '/user', json=data, headers=headers,
+                                 auth=cls.auth)
+        resp = response.json()
+        cls.user6_id = resp['_id']
+        data = {'user': resp['_id'], 'realm': cls.sluis, 'resource': '*', 'crud': ['read'],
+                'sub_realm': True}
+        requests.post(cls.endpoint + '/userrestrictrole', json=data, headers=headers,
+                      auth=cls.auth)
+
     @classmethod
     def tearDownClass(cls):
         """
@@ -180,7 +194,7 @@ class TestRights(unittest2.TestCase):
         # Check if command right in backend
         response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
         resp = response.json()
-        self.assertEqual(resp['_items'][0]['name'], "ping1")
+        self.assertEqual(resp['_items'][2]['name'], "ping1")
 
         data['_sub_realm'] = False
         data['name'] = 'ping2'
@@ -233,17 +247,23 @@ class TestRights(unittest2.TestCase):
         resp = response.json()
         user5_auth = requests.auth.HTTPBasicAuth(resp['token'], '')
 
+        params = {'username': 'user6', 'password': 'test', 'action': 'generate'}
+        # get token user 5
+        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
+        resp = response.json()
+        user6_auth = requests.auth.HTTPBasicAuth(resp['token'], '')
+
         response = requests.get(self.endpoint + '/command', params={'sort': "name"},
                                 auth=user1_auth)
         resp = response.json()
-        self.assertEqual(len(resp['_items']), 3)
-        self.assertEqual(resp['_meta']['total'], 3)
+        self.assertEqual(len(resp['_items']), 5)
+        self.assertEqual(resp['_meta']['total'], 5)
 
         response = requests.get(self.endpoint + '/command', params={'sort': "name"},
                                 auth=user2_auth)
         resp = response.json()
-        self.assertEqual(len(resp['_items']), 2)
-        self.assertEqual(resp['_meta']['total'], 2)
+        self.assertEqual(len(resp['_items']), 4)
+        self.assertEqual(resp['_meta']['total'], 4)
 
         response = requests.get(self.endpoint + '/command', params={'sort': "name"},
                                 auth=user3_auth)
@@ -260,5 +280,22 @@ class TestRights(unittest2.TestCase):
         response = requests.get(self.endpoint + '/command', params={'sort': "name"},
                                 auth=user5_auth)
         resp = response.json()
+        self.assertEqual(len(resp['_items']), 4)
+        self.assertEqual(resp['_meta']['total'], 4)
+
+        # Check user5 with realms
+        response = requests.get(self.endpoint + '/realm', params={'sort': "name"},
+                                auth=user5_auth)
+        resp = response.json()
+        self.assertEqual(len(resp['_items']), 1)
+        self.assertEqual(resp['_meta']['total'], 1)
+        self.assertEqual('Sluis', resp['_items'][0]['name'])
+
+        # Check user6 with realms, must have 2 realms : Sluis and Dagobah
+        response = requests.get(self.endpoint + '/realm', params={'sort': "name"},
+                                auth=user6_auth)
+        resp = response.json()
         self.assertEqual(len(resp['_items']), 2)
         self.assertEqual(resp['_meta']['total'], 2)
+        self.assertEqual('Dagobah', resp['_items'][0]['name'])
+        self.assertEqual('Sluis', resp['_items'][1]['name'])

@@ -22,30 +22,11 @@
   "MONGO_USERNAME": null,             /* Username to access to MongoDB */
   "MONGO_PASSWORD": null,             /* Password to access to MongoDB */
 
-  "GRAPHITE_HOST": null,  /* Graphite (web API) for metrics, to disable it, use: null */
-  "GRAPHITE_PORT": 8080,  /* Port of Graphite */
-  "CARBON_HOST": null,  /* Carbon for metrics, to disable it, use: null */
-  "CARBON_PORT": 2004,  /* Port of Carbon */
-
-  "INFLUXDB_HOST": null,          /* Influxdb for metrics, to disable it, use: null */
-  "INFLUXDB_PORT": 8086,          /* Port of Influxdb */
-  "INFLUXDB_DATABASE": "alignak", /* Name of database in Influxdb */
-  "INFLUXDB_LOGIN": "admin",       /* Username to access to Influxdb */
-  "INFLUXDB_PASSWORD": "admin",    /* Username to access to Influxdb */
-
   /* Timeseries data are stored in retention in backend. Activate the timeseries scheduler
    will push into timeseries databases the data.
    BE CAREFULL, ACTIVATE IT ONLY ON ONE BACKEND */
   "SCHEDULER_TIMESERIES_ACTIVE": false,
   /* This scheduler will create / update dashboards in grafana.
    BE CAREFULL, ACTIVATE IT ONLY ON ONE BACKEND */
-  "SCHEDULER_GRAFANA_ACTIVE": false,
-
-  "GRAFANA_HOST": null,           /* IP or DNS of grafana, to disable it, use: null */
-  "GRAFANA_PORT": 3000,           /* Port of grafana */
-  "GRAFANA_APIKEY": "",           /* API key generated in grafana interface */
-  "GRAFANA_TEMPLATE_DASHBOARD": {
-    "timezone": "browser",
-    "refresh": "1m"
-  }
+  "SCHEDULER_GRAFANA_ACTIVE": false
 }
