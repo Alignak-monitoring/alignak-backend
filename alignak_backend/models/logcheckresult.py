@@ -69,7 +69,7 @@ def get_schema():
             },
             'last_check': {
                 'type': 'integer',
-                'default': None
+                'default': 0
             },
             'last_state': {
                 'type': 'string',

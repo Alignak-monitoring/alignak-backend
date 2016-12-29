@@ -4,7 +4,7 @@ Alignak Backend
 *Python Eve REST Backend for Alignak monitoring framework*
 
 Build status (stable release)
-----------------------------------------
+-----------------------------
 
 .. image:: https://travis-ci.org/Alignak-monitoring-contrib/alignak-backend.svg?branch=master
     :target: https://travis-ci.org/Alignak-monitoring-contrib/alignak-backend
@@ -15,7 +15,7 @@ Build status (stable release)
 
 
 Build status (development release)
-----------------------------------------
+----------------------------------
 
 .. image:: https://travis-ci.org/Alignak-monitoring-contrib/alignak-backend.svg?branch=develop
     :target: https://travis-ci.org/Alignak-monitoring-contrib/alignak-backend
@@ -26,12 +26,12 @@ Build status (development release)
 
 
 Documentation
-----------------------------------------
+-------------
 
 You can find online documentation on `Read The Docs <http://alignak-backend.readthedocs.org>`_.
 
 Release strategy
-----------------------------------------
+----------------
 
 Alignak backend and its *satellites* (backend client, and backend import tools) must all have the
 same features level. As of it, take care to install the same minor version on your system to
@@ -58,7 +58,7 @@ Previous versions:
 - 0.3: version compatible with Alignak version 0.1
 
 Short description
--------------------
+-----------------
 
 This package is an Alignak Backend.
 
@@ -80,12 +80,12 @@ It is used to:
 
 
 Bugs, issues and contributing
-----------------------------------------
+-----------------------------
 
 Please report any issue using the project `GitHub repository: <https://github.com/Alignak-monitoring-contrib/alignak-backend/issues>`_.
 
 License
-----------------------------------------
+-------
 
 Alignak Backend is available under the `GPL version 3 <http://opensource.org/licenses/GPL-3.0>`_.
 
