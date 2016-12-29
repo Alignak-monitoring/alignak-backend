@@ -1204,7 +1204,7 @@ app.config['SWAGGER_INFO'] = {
         'name': manifest['license']
     }
 }
-
+app.config['ENABLE_HOOK_DESCRIPTION'] = True
 
 # Create default backend elements
 with app.test_request_context():

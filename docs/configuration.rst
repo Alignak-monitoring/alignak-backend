@@ -94,3 +94,58 @@ The username and password to access MongoDB and the database defined previously:
 
     "MONGO_USERNAME": null,
     "MONGO_PASSWORD": null,
+
+Timeseries databases
+--------------------
+
+To store the metrics, we need to configure Carbon/Graphite or/and InfluxDB.
+
+For Carbon/Graphite::
+
+    "GRAPHITE_HOST": "",
+    "GRAPHITE_PORT": 8080,
+    "CARBON_HOST": "",
+    "CARBON_PORT": 2004,
+
+For InfluxDB::
+
+  "INFLUXDB_HOST": "",
+  "INFLUXDB_PORT": 8086,
+  "INFLUXDB_DATABASE": "alignak",
+  "INFLUXDB_LOGIN": "admin",
+  "INFLUXDB_PASSWORD": "admin",
+
+The timeseries information are stored in the backend (like retention) and send with a scheduled
+cron (internal in the Backend), so need to activate this cron, but only on 1 Backend in case you
+have a cluster of Backend (many backends).
+
+Activate with::
+
+    "SCHEDULER_TIMESERIES_ACTIVE": true,
+
+Grafana: the dashboard/graph tool
+---------------------------------
+
+The backend can create the dahboards (one per host) and the graphs (one per host and one per
+services in the dashboad of the host related). Need too activate it on 1 Backend in case you have
+a cluster of Backend (many backends).
+
+For that, activate it::
+
+    "SCHEDULER_GRAFANA_ACTIVE": true,
+
+Define the hostname and port of Grafana::
+
+    "GRAFANA_HOST": "",
+    "GRAFANA_PORT": 3000,
+
+Create an API KEY in Grafana with right *admin* and put it in configuration file::
+
+  "GRAFANA_APIKEY": "",
+
+The default values for the dashboards::
+
+  "GRAFANA_TEMPLATE_DASHBOARD": {
+    "timezone": "browser",
+    "refresh": "1m"
+  }
