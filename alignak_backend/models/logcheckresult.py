@@ -51,7 +51,9 @@ def get_schema():
             },
             'state': {
                 'type': 'string',
-                'allowed': ["UP", "DOWN", "UNREACHABLE", "OK", "WARNING", "CRITICAL", "UNKNOWN"],
+                'allowed': ["PENDING",
+                            "UP", "DOWN", "UNREACHABLE",
+                            "OK", "WARNING", "CRITICAL", "UNKNOWN"],
                 'required': True,
             },
             'state_type': {
@@ -86,7 +88,9 @@ def get_schema():
             'last_state': {
                 'type': 'string',
                 'default': 'OK',
-                'allowed': ["OK", "WARNING", "CRITICAL", "UNKNOWN", "UP", "DOWN", "UNREACHABLE"]
+                'allowed': ["PENDING",
+                            "UP", "DOWN", "UNREACHABLE",
+                            "OK", "WARNING", "CRITICAL", "UNKNOWN"],
             },
             'last_state_type': {
                 'type': 'string',

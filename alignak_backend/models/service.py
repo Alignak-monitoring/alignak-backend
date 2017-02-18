@@ -423,7 +423,7 @@ def get_schema():
             'ls_state': {
                 'type': 'string',
                 'default': 'UNKNOWN',
-                'allowed': ["OK", "WARNING", "CRITICAL", "UNKNOWN", "UNREACHABLE"]
+                'allowed': ["OK", "PENDING", "WARNING", "CRITICAL", "UNKNOWN", "UNREACHABLE"]
             },
             'ls_state_type': {
                 'type': 'string',
@@ -457,7 +457,7 @@ def get_schema():
             'ls_last_state': {
                 'type': 'string',
                 'default': 'OK',
-                'allowed': ["OK", "WARNING", "CRITICAL", "UNKNOWN", "UNREACHABLE"]
+                'allowed': ["OK", "PENDING", "WARNING", "CRITICAL", "UNKNOWN", "UNREACHABLE"]
             },
             'ls_last_state_type': {
                 'type': 'string',
