@@ -3,14 +3,8 @@
 """
 Main
 """
-from alignak_backend.app import app
+from alignak_backend import app
 
-
-def main():
-    """
-    Main function
-    """
-    app.run()
 
 if __name__ == "__main__":  # pragma: no cover
-    main()
+    app.main()
