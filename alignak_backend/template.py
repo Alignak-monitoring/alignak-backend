@@ -33,6 +33,7 @@ class Template(object):
         :type user_request: object
         :return: None
         """
+        print("pre_post_host template")
         if isinstance(user_request.json, dict):
             Template.fill_template_host(user_request.json)
         else:
