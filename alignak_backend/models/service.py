@@ -709,7 +709,7 @@ def get_schema():
                 "comment": "Current state",
                 'type': 'string',
                 'default': 'UNKNOWN',
-                'allowed': ["OK", "WARNING", "CRITICAL", "UNKNOWN", "UNREACHABLE"]
+                'allowed': ["OK", "PENDING", "WARNING", "CRITICAL", "UNKNOWN", "UNREACHABLE"]
             },
             'ls_state_type': {
                 "title": "State type",
@@ -761,7 +761,7 @@ def get_schema():
                 "comment": "Former state",
                 'type': 'string',
                 'default': 'OK',
-                'allowed': ["OK", "WARNING", "CRITICAL", "UNKNOWN", "UNREACHABLE"]
+                'allowed': ["OK", "PENDING", "WARNING", "CRITICAL", "UNKNOWN", "UNREACHABLE"]
             },
             'ls_last_state_type': {
                 "title": "Last state type",
