@@ -109,7 +109,7 @@ class TestLogcheckresult(unittest2.TestCase):
 
         # Add a service
         data = json.loads(open('cfg/service_srv001_ping.json').read())
-        data['host'] = rh[0]['_id']
+        data['host'] = rh[1]['_id']
         data['check_command'] = rc[0]['_id']
         data['_realm'] = cls.realm_all
         requests.post(cls.endpoint + '/service', json=data, headers=headers, auth=cls.auth)

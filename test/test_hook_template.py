@@ -18,7 +18,7 @@ from alignak_backend.models.user import get_schema as user_schema
 
 class TestHookTemplate(unittest2.TestCase):
     """
-    This class test the hooks used for hosts and services templates
+    This class test the hooks used for hosts, services and users templates
     """
 
     maxDiff = None
@@ -130,6 +130,7 @@ class TestHookTemplate(unittest2.TestCase):
         # We add a host and it use the template we have created
         data = {
             'name': 'host_001',
+            'alias': 'My host',
             '_templates': [host_template_id],
             '_realm': self.realm_all,
             'business_impact': 3
@@ -157,6 +158,8 @@ class TestHookTemplate(unittest2.TestCase):
         # we remove in reference the fields defined in the host directly
         if 'name' in template_fields_ref:
             template_fields_ref.remove('name')
+        if 'alias' in template_fields_ref:
+            template_fields_ref.remove('alias')
         if 'business_impact' in template_fields_ref:
             template_fields_ref.remove('business_impact')
         # we compare the _template_fields in the backend and our reference
@@ -165,11 +168,13 @@ class TestHookTemplate(unittest2.TestCase):
         # We add 2 new hosts in same time with the template
         datal = [{
             'name': 'host_002',
+            'alias': 'My host 2',
             '_templates': [rh[1]['_id']],
             '_realm': self.realm_all,
             'business_impact': 2
         }, {
             'name': 'host_003',
+            'alias': 'My host 3',
             '_templates': [rh[1]['_id']],
             '_realm': self.realm_all
         }]

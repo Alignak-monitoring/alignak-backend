@@ -35,6 +35,7 @@ from flask import current_app, g, request, abort, jsonify, make_response, send_f
 from flask_apscheduler import APScheduler
 from flask_bootstrap import Bootstrap
 from werkzeug.security import check_password_hash, generate_password_hash
+from bson.objectid import ObjectId
 
 import alignak_backend
 from alignak_backend import manifest
@@ -1588,6 +1589,24 @@ def after_insert_user(items):
             }, True)
 
 
+def pre_service_post(items):
+    """Check before add service.
+    We deny in case try add a service (not template) on a template host
+
+    :param items: list of items (list because can use bulk)
+    :type items: list
+    :return: None
+    """
+    hostdb = current_app.data.driver.db['host']
+    for key, _ in enumerate(items):
+        # return error if try add service (not template) on host template
+        if '_is_template' not in items[key] or not items[key]['_is_template']:
+            the_host = hostdb.find_one({'_id': ObjectId(items[key]['host'])})
+            if the_host['_is_template']:
+                abort(make_response("Add a non template service on a template host is forbidden",
+                                    412))
+
+
 def keep_default_items_resource(resource, delete_request, lookup):
     """
     Keep default items, so do not delete them...
@@ -2086,6 +2105,8 @@ app.on_inserted_logcheckresult += after_insert_logcheckresult
 
 app.on_pre_DELETE += keep_default_items_resource
 app.on_delete_item += keep_default_items_item
+
+app.on_insert_service += pre_service_post
 
 # hook for tree resources
 app.on_fetched_resource += on_fetched_resource_tree

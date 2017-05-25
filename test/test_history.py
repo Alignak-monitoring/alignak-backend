@@ -88,7 +88,7 @@ class TestHistory(unittest2.TestCase):
         data = json.loads(open('cfg/command_ping.json').read())
         data['_realm'] = cls.realm_all
         requests.post(cls.endpoint + '/command', json=data, headers=headers, auth=cls.auth)
-        response = requests.get(cls.endpoint + '/command', auth=cls.auth)
+        response = requests.get(cls.endpoint + '/command?where={"name":"ping"}', auth=cls.auth)
         resp = response.json()
         rc = resp['_items']
 
@@ -100,7 +100,7 @@ class TestHistory(unittest2.TestCase):
         data['_realm'] = cls.realm_all
         response = requests.post(cls.endpoint + '/host', json=data, headers=headers, auth=cls.auth)
         resp = response.json()
-        response = requests.get(cls.endpoint + '/host', auth=cls.auth)
+        response = requests.get(cls.endpoint + '/host?where={"name":"srv001"}', auth=cls.auth)
         resp = response.json()
         rh = resp['_items']
 
@@ -286,7 +286,7 @@ class TestHistory(unittest2.TestCase):
         # -------------------------------------------
         # Add an history comment - host_name, service_name and user_name
         data = {
-            "host_name": rh[0]['name'],
+            "host_name": rh[1]['name'],
             "service_name": rs[0]['name'],
             "user_name": "admin",
             "type": "webui.comment",
@@ -306,8 +306,8 @@ class TestHistory(unittest2.TestCase):
         # print("History 0: %s" % re[0])
         print("History 1: %s" % re[1])
 
-        self.assertEqual(re[1]['host'], rh[0]['_id'])
-        self.assertEqual(re[1]['host_name'], rh[0]['name'])
+        self.assertEqual(re[1]['host'], rh[1]['_id'])
+        self.assertEqual(re[1]['host_name'], 'srv001')
         self.assertEqual(re[1]['service'], rs[0]['_id'])
         self.assertEqual(re[1]['service_name'], rs[0]['name'])
         self.assertEqual(re[1]['user'], self.user_admin)

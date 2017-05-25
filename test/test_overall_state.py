@@ -722,7 +722,11 @@ class TestOverallState(unittest2.TestCase):
         # Add command
         data = json.loads(open('cfg/command_ping.json').read())
         data['_realm'] = self.realm_all
-        requests.post(self.endpoint + '/command', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/command', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+
         # Check if command right in backend
         response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
         resp = response.json()
@@ -734,7 +738,11 @@ class TestOverallState(unittest2.TestCase):
         if 'realm' in data:
             del data['realm']
         data['_realm'] = self.realm_all
-        requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/host', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
+
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
@@ -743,7 +751,7 @@ class TestOverallState(unittest2.TestCase):
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
         resp = response.json()
         r = resp['_items']
-        ls_host = copy.copy(r[0])
+        ls_host = copy.copy(r[1])
 
         # Update live state for the host
         # => UP HARD
@@ -757,16 +765,21 @@ class TestOverallState(unittest2.TestCase):
             'Content-Type': 'application/json',
             'If-Match': ls_host['_etag']
         }
-        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
-                       headers=headers_patch, auth=self.auth)
+        response = requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                                  headers=headers_patch, auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
 
         # Add service
         data = {
-            'host': rh[0]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
+            'host': rh[1]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
             'name': 'fake_service-1', 'ls_state': 'CRITICAL',
             'ls_state_type': 'HARD', 'ls_acknowledged': False, 'ls_downtimed': False
         }
-        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/service', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
 
         # Get service
         params = {'where': json.dumps({'name': 'fake_service-1'})}
@@ -779,11 +792,14 @@ class TestOverallState(unittest2.TestCase):
 
         # Add service
         data = {
-            'host': rh[0]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
+            'host': rh[1]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
             'name': 'fake_service-2', 'ls_state': 'UNREACHABLE',
             'ls_state_type': 'HARD', 'ls_acknowledged': False, 'ls_downtimed': False
         }
-        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/service', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
 
         # Get service
         params = {'where': json.dumps({'name': 'fake_service-2'})}
@@ -796,11 +812,14 @@ class TestOverallState(unittest2.TestCase):
 
         # Add service
         data = {
-            'host': rh[0]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
+            'host': rh[1]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
             'name': 'fake_service-3', 'ls_state': 'UNKNOWN',
             'ls_state_type': 'HARD', 'ls_acknowledged': False, 'ls_downtimed': False
         }
-        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/service', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
 
         # Get service
         params = {'where': json.dumps({'name': 'fake_service-3'})}
@@ -813,11 +832,14 @@ class TestOverallState(unittest2.TestCase):
 
         # Add service
         data = {
-            'host': rh[0]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
+            'host': rh[1]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
             'name': 'fake_service-4', 'ls_state': 'WARNING',
             'ls_state_type': 'HARD', 'ls_acknowledged': False, 'ls_downtimed': False
         }
-        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/service', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
 
         # Get service
         params = {'where': json.dumps({'name': 'fake_service-4'})}
@@ -830,11 +852,14 @@ class TestOverallState(unittest2.TestCase):
 
         # Add service
         data = {
-            'host': rh[0]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
+            'host': rh[1]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
             'name': 'fake_service-5', 'ls_state': 'OK',
             'ls_state_type': 'HARD', 'ls_acknowledged': False, 'ls_downtimed': False
         }
-        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/service', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
 
         # Get service
         params = {'where': json.dumps({'name': 'fake_service-5'})}
@@ -847,11 +872,14 @@ class TestOverallState(unittest2.TestCase):
 
         # Add service
         data = {
-            'host': rh[0]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
+            'host': rh[1]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
             'name': 'fake_service-6', 'ls_state': 'CRITICAL',
             'ls_state_type': 'HARD', 'ls_acknowledged': False, 'ls_downtimed': True
         }
-        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/service', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
 
         # Get service
         params = {'where': json.dumps({'name': 'fake_service-6'})}
@@ -864,11 +892,14 @@ class TestOverallState(unittest2.TestCase):
 
         # Add service
         data = {
-            'host': rh[0]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
+            'host': rh[1]['_id'], 'check_command': rc[0]['_id'], '_realm': self.realm_all,
             'name': 'fake_service-7', 'ls_state': 'CRITICAL',
             'ls_state_type': 'HARD', 'ls_acknowledged': True, 'ls_downtimed': False
         }
-        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+        response = requests.post(self.endpoint + '/service', json=data, headers=headers,
+                                 auth=self.auth)
+        resp = response.json()
+        self.assertEqual('OK', resp['_status'], resp)
 
         # Get service
         params = {'where': json.dumps({'name': 'fake_service-7'})}

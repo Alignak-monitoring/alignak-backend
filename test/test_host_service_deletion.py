@@ -153,14 +153,7 @@ class TestHostServiceDeletion(unittest2.TestCase):
 
         :return: None
         """
-        # Login as admin
         headers = {'Content-Type': 'application/json'}
-        params = {'username': 'admin', 'password': 'admin', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
-
         # Create an host without template
         data = {'name': 'host_1'}
         resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
@@ -199,14 +192,7 @@ class TestHostServiceDeletion(unittest2.TestCase):
 
         :return: None
         """
-        # Login as admin
         headers = {'Content-Type': 'application/json'}
-        params = {'username': 'admin', 'password': 'admin', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
-
         # Create an host template
         data = {
             'name': 'tpl_1',
@@ -263,17 +249,19 @@ class TestHostServiceDeletion(unittest2.TestCase):
 
         :return: None
         """
-        # Login as admin
         headers = {'Content-Type': 'application/json'}
-        params = {'username': 'admin', 'password': 'admin', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
+
+        # create the host
+        data = {'name': 'host_1'}
+        resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
+        resp = resp.json()
+        assert '_id' in resp
+        assert '_created' in resp
+        assert '_updated' in resp
 
         # Create a service without template
         data = {
-            'host': self.default_host,
+            'host': resp['_id'],
             'name': 'service_3'
         }
         resp = requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
@@ -314,14 +302,7 @@ class TestHostServiceDeletion(unittest2.TestCase):
 
         :return: None
         """
-        # Login as admin
         headers = {'Content-Type': 'application/json'}
-        params = {'username': 'admin', 'password': 'admin', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
-
         # Create an host without template
         data = {'name': 'host_1'}
         resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)

@@ -129,7 +129,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
             for host in hosts:
                 Template.update_host_use_template(host, updates)
         else:
-            if '_templates'in updates and updates['_templates'] != original['_templates']:
+            if '_templates' in updates and updates['_templates'] != original['_templates']:
                 if original['_templates_with_services']:
                     service_db = current_app.data.driver.db['service']
 
@@ -195,7 +195,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
         """Called by EVE HOOK (app.on_inserted_service)
 
         After service inserted, if it is a template and the host linked is a template with services
-        we add the service in all hosts have this host in template
+        we add the service in all hosts having this host as template
 
         :param items: List of services
         :type items: list
@@ -264,6 +264,10 @@ class Template(object):  # pylint: disable=too-many-public-methods
         """
         if g.get('ignore_hook_patch', False):
             return
+        # check if not modified the _is_template field
+        if '_is_template' in updates and not updates['_is_template'] and original['_is_template']:
+            abort(make_response("Change a service template to not template is forbidden", 412))
+        # manage services not template
         if not original['_is_template']:
             template_fields = original['_template_fields']
             do_patch = False
@@ -282,8 +286,8 @@ class Template(object):  # pylint: disable=too-many-public-methods
     def on_updated_service(updates, original):
         """Called by EVE HOOK (app.on_updated_service)
 
-        After service updated, if service is a template, report value of fields updated on
-        service used this template
+        After a service got updated, if this service is a template, report value of the updated
+        fields in the services using this template
 
         :param updates: modified fields
         :type updates: dict
@@ -295,7 +299,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
             g.ignore_hook_patch = False
             return
         if original['_is_template']:
-            # We must update all service use this template
+            # We must update all the services that use this template
             service_db = current_app.data.driver.db['service']
             services = service_db.find({'_templates': original['_id']})
             for service in services:
@@ -518,6 +522,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
         cumulated_fields = {'tags': [], 'customs': {}, 'users': [], 'usergroups': []}
         # The fields which must be ignored:
         not_updated_fields = []
+
         for (field_name, field_value) in iteritems(item):
             not_updated_fields.append(field_name)
         item['_template_fields'] = []
@@ -587,6 +592,8 @@ class Template(object):  # pylint: disable=too-many-public-methods
         :return: None
         """
         service_db = current_app.data.driver.db['service']
+
+        # Get the field values from the service templates
         template_fields = {}
         for template_id in service['_templates']:
             temp = service_db.find_one({'_id': template_id})

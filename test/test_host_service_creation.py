@@ -108,6 +108,12 @@ class TestHookTemplate(unittest2.TestCase):
         assert len(resp['_items']) == 1
         assert resp['_items'][0]['crud'] == ['read', 'create']
 
+        params = {'username': 'user1', 'password': 'test', 'action': 'generate'}
+        response = requests.post(cls.endpoint + '/login', json=params, headers=headers)
+        resp = response.json()
+        cls.token1 = resp['token']
+        cls.auth1 = requests.auth.HTTPBasicAuth(cls.token1, '')
+
         # Get default host
         response = requests.get(cls.endpoint + '/host', auth=cls.auth,
                                 params={'where': json.dumps({'name': '_dummy'})})
@@ -143,23 +149,16 @@ class TestHookTemplate(unittest2.TestCase):
 
         :return: None
         """
-        for resource in ['host', 'service', 'command', 'livestate', 'livesynthesis', 'user',
-                         'userrestrictrole']:
-            requests.delete(cls.endpoint + '/' + resource, auth=cls.auth)
+        for resource in ['host', 'service', 'command', 'livesynthesis']:
+            response = requests.delete(cls.endpoint + '/' + resource, auth=cls.auth)
+            assert response.status_code == 204
 
     def test_host_default_check_command(self):
         """Create a new host with default check command and realm
 
         :return: None
         """
-        # Login as admin
         headers = {'Content-Type': 'application/json'}
-        params = {'username': 'admin', 'password': 'admin', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
-
         # Create an host without template
         data = {'name': 'host_1'}
         resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
@@ -231,17 +230,10 @@ class TestHookTemplate(unittest2.TestCase):
 
         :return: None
         """
-        # Login as non admin user: user1 is a user member of a sub-realm
         headers = {'Content-Type': 'application/json'}
-        params = {'username': 'user1', 'password': 'test', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
-
         # Create an host without template
         data = {'name': 'host_3'}
-        resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
+        resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth1)
         resp = resp.json()
         assert '_id' in resp
         assert '_created' in resp
@@ -249,7 +241,7 @@ class TestHookTemplate(unittest2.TestCase):
         # host was created with only a name information...
 
         # Get the newly created host
-        response = requests.get(self.endpoint + '/host/' + resp['_id'], auth=self.auth)
+        response = requests.get(self.endpoint + '/host/' + resp['_id'], auth=self.auth1)
         host = response.json()
         self.assertEqual(host['name'], "host_3")
         self.assertEqual(host['_realm'], self.sub_realm)
@@ -260,17 +252,21 @@ class TestHookTemplate(unittest2.TestCase):
 
         :return: None
         """
-        # Login as admin
         headers = {'Content-Type': 'application/json'}
-        params = {'username': 'admin', 'password': 'admin', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
+        # create a host
+        data = {
+            'name': 'host_1',
+            '_templates': [self.default_host]
+        }
+        response = requests.post(self.endpoint + '/host', json=data, headers=headers,
+                                 auth=self.auth)
         resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
+        self.assertEqual('OK', resp['_status'], resp)
+        host1_id = resp['_id']
 
         # Create a service without template
         data = {
-            'host': self.default_host,
+            'host': host1_id,
             'name': 'service_3'
         }
         resp = requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
@@ -334,7 +330,7 @@ class TestHookTemplate(unittest2.TestCase):
 
         # Create a service inheriting from the new template
         data = {
-            'host': self.default_host,
+            'host': host1_id,
             'name': 'service_2',
             '_templates': [tpl['_id']]
         }
@@ -356,20 +352,22 @@ class TestHookTemplate(unittest2.TestCase):
 
         :return: None
         """
-        # Login as non admin user: user1 is a user member of a sub-realm
         headers = {'Content-Type': 'application/json'}
-        params = {'username': 'user1', 'password': 'test', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
+        # Create an host without template
+        data = {'name': 'host_3'}
+        resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth1)
+        resp = resp.json()
+        assert '_id' in resp
+        assert '_created' in resp
+        assert '_updated' in resp
 
         # Create a service without template
         data = {
-            'host': self.default_host,
+            'host': resp['_id'],
             'name': 'service_2'
         }
-        resp = requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+        resp = requests.post(self.endpoint + '/service', json=data, headers=headers,
+                             auth=self.auth1)
         resp = resp.json()
         assert '_id' in resp
         assert '_created' in resp
@@ -377,7 +375,7 @@ class TestHookTemplate(unittest2.TestCase):
         # service was created with only an host and a name information...
 
         # Get the newly created service
-        response = requests.get(self.endpoint + '/service/' + resp['_id'], auth=self.auth)
+        response = requests.get(self.endpoint + '/service/' + resp['_id'], auth=self.auth1)
         service = response.json()
         self.assertEqual(service['name'], "service_2")
         self.assertEqual(service['_realm'], self.sub_realm)

@@ -1,0 +1,182 @@
+[
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "aggregation": "",
+        "active_checks_enabled": true,
+        "alias": "",
+        "check_period": "24x7",
+        "host": "_dummy",
+        "imported_from": "alignak-checks-linux-nrpe",
+        "initial_state": "x",
+        "name": "linux-nrpe-service",
+        "notes": "",
+        "notes_url": "",
+        "tags": [
+            "nrpe-service"
+        ]
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system",
+        "alias": "NRPE version",
+        "check_command": "check_nrpe_version",
+        "check_command_args": "",
+        "customs": {},
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_version"
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system/disks",
+        "alias": "Disk /",
+        "check_command": "check_nrpe",
+        "check_command_args": "check_root",
+        "customs": {
+            "_DETAILLEDESC": "Overall disks usage",
+            "_IMPACT": "Depends on disks, cause system instability",
+            "_FIXACTIONS": "Clean the appropriate disks"
+        },
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_disk_root"
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system/disks",
+        "alias": "Disk /var",
+        "check_command": "check_nrpe",
+        "check_command_args": "check_var",
+        "customs": {
+            "_DETAILLEDESC": "/var disks usage",
+            "_IMPACT": "Depends on disks, cause system instability",
+            "_FIXACTIONS": "Clean the appropriate disks"
+        },
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_disk_var"
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system/disks",
+        "alias": "Disk /tmp",
+        "check_command": "check_nrpe",
+        "check_command_args": "check_tmp",
+        "customs": {
+            "_DETAILLEDESC": "/tmp disks usage",
+            "_IMPACT": "Depends on disks, cause system instability",
+            "_FIXACTIONS": "Clean the appropriate disks"
+        },
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_disk_tmp"
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system/disks",
+        "alias": "Disk /usr",
+        "check_command": "check_nrpe",
+        "check_command_args": "check_usr",
+        "customs": {
+            "_DETAILLEDESC": "/usr disks usage",
+            "_IMPACT": "Depends on disks, cause system instability",
+            "_FIXACTIONS": "Clean the appropriate disks"
+        },
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_disk_usr"
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system",
+        "alias": "Load",
+        "check_command": "check_nrpe",
+        "check_command_args": "check_load",
+        "customs": {
+            "_DETAILLEDESC": "Detect abnormal CPU usage",
+            "_IMPACT": "Slow down applications hosted by the system",
+            "_FIXACTIONS": "If recurrent situation then make performance audit"
+        },
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_load"
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system",
+        "alias": "Users",
+        "check_command": "check_nrpe",
+        "check_command_args": "check_users",
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_users"
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system",
+        "alias": "Processus",
+        "check_command": "check_nrpe",
+        "check_command_args": "check_total_procs",
+        "customs": {
+            "_DETAILLEDESC": "Detect abnormal running processus count",
+            "_IMPACT": "Slow down applications hosted by the system",
+            "_FIXACTIONS": "Try to decrease the running processus number"
+        },
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_processus"
+    },
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates": [
+            "linux-nrpe-service"
+        ],
+        "aggregation": "system",
+        "alias": "Zombies",
+        "check_command": "check_nrpe",
+        "check_command_args": "check_zombie_procs",
+        "customs": {
+            "_DETAILLEDESC": "Detect abnormal dead processus",
+            "_IMPACT": "Slow down applications hosted by the system",
+            "_FIXACTIONS": "Kill the dead zombie processus"
+        },
+        "host": "linux-nrpe",
+        "name": "linux_nrpe_zombies"
+    }
+]
