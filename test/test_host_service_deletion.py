@@ -147,8 +147,10 @@ class TestHookTemplate(unittest2.TestCase):
                          'userrestrictrole']:
             requests.delete(cls.endpoint + '/' + resource, auth=cls.auth)
 
-    def test_host_default_check_command(self):
+    def test_host_create_delete(self):
         """Create a new host with default check command and realm.
+
+        Then deletes this host to confirm it is marked as deleted
 
         :return: None
         """
@@ -167,31 +169,53 @@ class TestHookTemplate(unittest2.TestCase):
         assert '_id' in resp
         assert '_created' in resp
         assert '_updated' in resp
-        # host was created with only a name information...
+        # host was created with only a name information... and not marked as deleted ;)
 
         # Get the newly created host
         response = requests.get(self.endpoint + '/host/' + resp['_id'], auth=self.auth)
+        self.assertEqual(response.status_code, 200)
         host = response.json()
         self.assertEqual(host['name'], "host_1")
+        self.assertEqual(resp['_deleted'], False)
         self.assertEqual(host['_realm'], self.realm_all)
         self.assertEqual(host['check_command'], self.default_host_check_command)
 
-        # Add a check command
-        data = json.loads(open('cfg/command_ping.json').read())
-        data['_realm'] = self.realm_all
-        requests.post(self.endpoint + '/command', json=data, headers=headers, auth=self.auth)
+        # Delete the host
+        headers_delete = {
+            'Content-Type': 'application/json',
+            'If-Match': host['_etag']
+        }
+        response = requests.delete(self.endpoint + '/host/' + host['_id'],
+                                   headers=headers_delete, auth=self.auth)
+        self.assertEqual(response.status_code, 204)
 
-        # Check command exists in the backend
-        response = requests.get(self.endpoint + '/command', auth=self.auth,
-                                params={'where': json.dumps({'name': 'ping'})})
+        # Get the newly created host - that is now marked as deleted!
+        response = requests.get(self.endpoint + '/host/' + resp['_id'], auth=self.auth)
+        # Returns 404 not found !
+        self.assertEqual(response.status_code, 404)
+        host = response.json()
+        # But host information is provided with _deleted True
+        self.assertEqual(host['name'], "host_1")
+        self.assertEqual(host['_deleted'], True)
+
+    def test_templated_host_create_delete(self):
+        """Create a new host from a template
+
+        Then deletes this host to confirm it is marked as deleted
+
+        :return: None
+        """
+        # Login as admin
+        headers = {'Content-Type': 'application/json'}
+        params = {'username': 'admin', 'password': 'admin', 'action': 'generate'}
+        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
         resp = response.json()
-        cmd = resp['_items'][0]
-        self.assertEqual(cmd['name'], "ping")
+        self.token = resp['token']
+        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
 
         # Create an host template
         data = {
             'name': 'tpl_1',
-            'check_command': cmd['_id'],
             '_is_template': True
         }
         resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
@@ -204,8 +228,8 @@ class TestHookTemplate(unittest2.TestCase):
         response = requests.get(self.endpoint + '/host/' + resp['_id'], auth=self.auth)
         tpl = response.json()
         self.assertEqual(tpl['name'], "tpl_1")
+        self.assertEqual(tpl['_deleted'], False)
         self.assertEqual(tpl['_realm'], self.realm_all)
-        self.assertEqual(tpl['check_command'], cmd['_id'])
 
         # Create an host inheriting from the new template
         data = {
@@ -225,39 +249,29 @@ class TestHookTemplate(unittest2.TestCase):
         self.assertEqual(host['_deleted'], False)
         self.assertEqual(host['_realm'], self.realm_all)
         self.assertEqual(host['_templates'], [tpl['_id']])
-        self.assertEqual(host['check_command'], cmd['_id'])
 
-    def test_host_default_check_command_non_admin(self):
-        """Create a new host with default check command and realm as a non-admin user
+        # Delete the host
+        headers_delete = {
+            'Content-Type': 'application/json',
+            'If-Match': host['_etag']
+        }
+        response = requests.delete(self.endpoint + '/host/' + host['_id'],
+                                   headers=headers_delete, auth=self.auth)
+        self.assertEqual(response.status_code, 204)
 
-        :return: None
-        """
-        # Login as non admin user: user1 is a user member of a sub-realm
-        headers = {'Content-Type': 'application/json'}
-        params = {'username': 'user1', 'password': 'test', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
-
-        # Create an host without template
-        data = {'name': 'host_3'}
-        resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
-        resp = resp.json()
-        assert '_id' in resp
-        assert '_created' in resp
-        assert '_updated' in resp
-        # host was created with only a name information...
-
-        # Get the newly created host
+        # Get the newly created host - that is now marked as deleted!
         response = requests.get(self.endpoint + '/host/' + resp['_id'], auth=self.auth)
+        # Returns 404 not found !
+        self.assertEqual(response.status_code, 404)
         host = response.json()
-        self.assertEqual(host['name'], "host_3")
-        self.assertEqual(host['_realm'], self.sub_realm)
-        self.assertEqual(host['check_command'], self.default_host_check_command)
+        # But host information is provided with _deleted True
+        self.assertEqual(host['name'], "host_2")
+        self.assertEqual(host['_deleted'], True)
 
     def test_service_default_check_command(self):
         """Create a new service with default check command and realm
+
+        Then delete the service
 
         :return: None
         """
@@ -283,103 +297,28 @@ class TestHookTemplate(unittest2.TestCase):
 
         # Get the newly created service
         response = requests.get(self.endpoint + '/service/' + resp['_id'], auth=self.auth)
+        self.assertEqual(response.status_code, 200)
         service = response.json()
         self.assertEqual(service['name'], "service_3")
+        self.assertEqual(service['_deleted'], False)
         self.assertEqual(service['_realm'], self.realm_all)
         self.assertEqual(service['check_command'], self.default_service_check_command)
 
-        # Add a check command
-        data = json.loads(open('cfg/command_ping.json').read())
-        data['_realm'] = self.realm_all
-        requests.post(self.endpoint + '/command', json=data, headers=headers, auth=self.auth)
-
-        # Check command exists in the backend
-        response = requests.get(self.endpoint + '/command', auth=self.auth,
-                                params={'where': json.dumps({'name': 'ping'})})
-        resp = response.json()
-        cmd = resp['_items'][0]
-        self.assertEqual(cmd['name'], "ping")
-
-        # Create an host template
-        data = {
-            'name': 'tpl_2',
-            'check_command': cmd['_id'],
-            '_is_template': True
+        # Delete the service
+        headers_delete = {
+            'Content-Type': 'application/json',
+            'If-Match': service['_etag']
         }
-        resp = requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
-        resp = resp.json()
-        assert '_id' in resp
-        assert '_created' in resp
-        assert '_updated' in resp
-        host_tpl_id = resp['_id']
+        response = requests.delete(self.endpoint + '/service/' + service['_id'],
+                                   headers=headers_delete, auth=self.auth)
+        self.assertEqual(response.status_code, 204)
 
-        # Create a service template
-        data = {
-            'host': host_tpl_id,
-            'name': 'tpl_svc_1',
-            'check_command': cmd['_id'],
-            '_is_template': True
-        }
-        resp = requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
-        resp = resp.json()
-        assert '_id' in resp
-        assert '_created' in resp
-        assert '_updated' in resp
-
-        # Get the newly created service template
+        # Get the newly created service - that is now marked as deleted!
         response = requests.get(self.endpoint + '/service/' + resp['_id'], auth=self.auth)
-        tpl = response.json()
-        self.assertEqual(tpl['name'], "tpl_svc_1")
-        self.assertEqual(tpl['check_command'], cmd['_id'])
-        self.assertEqual(tpl['host'], host_tpl_id)
-
-        # Create a service inheriting from the new template
-        data = {
-            'host': self.default_host,
-            'name': 'service_2',
-            '_templates': [tpl['_id']]
-        }
-        resp = requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
-        resp = resp.json()
-        assert '_id' in resp
-        assert '_created' in resp
-        assert '_updated' in resp
-
-        # Get the newly created service
-        response = requests.get(self.endpoint + '/service/' + resp['_id'], auth=self.auth)
+        # Returns 404 not found !
+        self.assertEqual(response.status_code, 404)
         service = response.json()
-        self.assertEqual(service['name'], "service_2")
-        self.assertEqual(service['_templates'], [tpl['_id']])
-        self.assertEqual(service['check_command'], cmd['_id'])
-
-    def test_service_default_check_command_non_admin(self):
-        """Create a new service with default check command and realm
-
-        :return: None
-        """
-        # Login as non admin user: user1 is a user member of a sub-realm
-        headers = {'Content-Type': 'application/json'}
-        params = {'username': 'user1', 'password': 'test', 'action': 'generate'}
-        response = requests.post(self.endpoint + '/login', json=params, headers=headers)
-        resp = response.json()
-        self.token = resp['token']
-        self.auth = requests.auth.HTTPBasicAuth(self.token, '')
-
-        # Create a service without template
-        data = {
-            'host': self.default_host,
-            'name': 'service_2'
-        }
-        resp = requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
-        resp = resp.json()
-        assert '_id' in resp
-        assert '_created' in resp
-        assert '_updated' in resp
-        # service was created with only an host and a name information...
-
-        # Get the newly created service
-        response = requests.get(self.endpoint + '/service/' + resp['_id'], auth=self.auth)
-        service = response.json()
-        self.assertEqual(service['name'], "service_2")
-        self.assertEqual(service['_realm'], self.sub_realm)
+        self.assertEqual(service['name'], "service_3")
+        self.assertEqual(service['_deleted'], True)
+        self.assertEqual(service['_realm'], self.realm_all)
         self.assertEqual(service['check_command'], self.default_service_check_command)

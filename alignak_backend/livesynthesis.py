@@ -61,48 +61,50 @@ class Livesynthesis(object):
 
             # Update hosts live synthesis
             hosts = current_app.data.driver.db['host']
-            hosts_count = hosts.find({'_is_template': False, '_realm': realm['_id']}).count()
+            hosts_count = hosts.find({'_is_template': False, '_deleted': False,
+                                      '_realm': realm['_id']}).count()
             if live_current['hosts_total'] != hosts_count:
                 data = {"hosts_total": hosts_count}
 
                 data['hosts_up_hard'] = hosts.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "UP", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['hosts_down_hard'] = hosts.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "DOWN", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['hosts_unreachable_hard'] = hosts.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "UNREACHABLE", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
 
                 data['hosts_up_soft'] = hosts.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "UP", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['hosts_down_soft'] = hosts.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "DOWN", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['hosts_unreachable_soft'] = hosts.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "UNREACHABLE", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
 
                 data['hosts_acknowledged'] = hosts.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     'ls_acknowledged': True, "_realm": realm["_id"]
                 }).count()
                 data['hosts_in_downtime'] = hosts.find({
-                    '_is_template': False, 'ls_downtimed': True, "_realm": realm["_id"]
+                    '_is_template': False, '_deleted': False,
+                    'ls_downtimed': True, "_realm": realm["_id"]
                 }).count()
 
                 lookup = {"_id": live_current['_id']}
@@ -110,68 +112,69 @@ class Livesynthesis(object):
 
             # Update services live synthesis
             services = current_app.data.driver.db['service']
-            services_count = services.find({'_is_template': False, '_realm': realm['_id']}).count()
+            services_count = services.find({'_is_template': False, '_deleted': False,
+                                            '_realm': realm['_id']}).count()
             if live_current['services_total'] != services_count:
                 data = {"services_total": services_count}
 
                 data['services_ok_hard'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "OK", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['services_warning_hard'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "WARNING", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['services_critical_hard'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "CRITICAL", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['services_unknown_hard'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "UNKNOWN", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['services_unreachable_hard'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "UNREACHABLE", "ls_state_type": "HARD",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
 
                 data['services_ok_soft'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "OK", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['services_warning_soft'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "WARNING", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['services_critical_soft'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "CRITICAL", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['services_unknown_soft'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "UNKNOWN", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
                 data['services_unreachable_soft'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_state": "UNREACHABLE", "ls_state_type": "SOFT",
                     "ls_acknowledged": False, "_realm": realm["_id"]
                 }).count()
 
                 data['services_acknowledged'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_acknowledged": True, "_realm": realm["_id"]
                 }).count()
                 data['services_in_downtime'] = services.find({
-                    '_is_template': False,
+                    '_is_template': False, '_deleted': False,
                     "ls_downtimed": True, "_realm": realm["_id"]
                 }).count()
                 lookup = {"_id": live_current['_id']}

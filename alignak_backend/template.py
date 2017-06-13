@@ -33,11 +33,27 @@ class Template(object):  # pylint: disable=too-many-public-methods
         :type user_request: object
         :return: None
         """
+        hosts_data = user_request.json
         if isinstance(user_request.json, dict):
-            Template.fill_template_host(user_request.json)
-        else:
-            for i in user_request.json:
-                Template.fill_template_host(i)
+            hosts_data = [user_request.json]
+
+        for host_data in hosts_data:
+            if 'name' in host_data and host_data['name']:
+                # Search if the host is not yet existing as a soft deleted item
+                hosts_drv = current_app.data.driver.db['host']
+                host = hosts_drv.find_one({'name': host_data['name'], '_deleted': True})
+                if host:
+                    # If so, restore the soft deleted item
+                    print("Restoring soft deleted host: %s" % (host_data['name']))
+                    lookup = {"_id": host['_id']}
+                    response, _, _, _ = patch_internal('host', payload=host_data,
+                                                       concurrency_check=False,
+                                                       skip_validation=False, **lookup)
+                    if response['_status'] == 'OK':
+                        print("Restored soft deleted host: %s (%s)"
+                              % (host_data['name'], host['_id']))
+            else:
+                Template.fill_template_host(host_data)
 
     @staticmethod
     def on_update_host(updates, original):
@@ -56,8 +72,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
             return
         if not original['_is_template']:
             ignore_schema_fields = ['realm', '_template_fields', '_templates',
-                                    '_is_template',
-                                    '_templates_with_services']
+                                    '_is_template', '_templates_with_services']
             template_fields = original['_template_fields']
             do_put = False
             for (field_name, _) in iteritems(updates):
@@ -72,6 +87,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
                 del putdata['_etag']
                 del putdata['_updated']
                 del putdata['_created']
+                del putdata['_deleted']
                 response = put_internal('host', putdata, False, False, **lookup)
                 updates['_etag'] = response[0]['_etag']
                 original['_etag'] = response[0]['_etag']
@@ -254,11 +270,45 @@ class Template(object):  # pylint: disable=too-many-public-methods
         :type user_request: object
         :return: None
         """
+        services_data = user_request.json
         if isinstance(user_request.json, dict):
-            Template.fill_template_service(user_request.json)
-        else:
-            for i in user_request.json:
-                Template.fill_template_service(i)
+            services_data = [user_request.json]
+
+        for service_data in services_data:
+            if 'name' in service_data and service_data['name'] and \
+                    'host' in service_data and service_data['host']:
+                print("Restoring soft deleted service: %s/%s"
+                      % (service_data['host'], service_data['name']))
+                # Search if the service host exists as a not soft deleted item
+                hosts_drv = current_app.data.driver.db['host']
+                hosts = hosts_drv.find({'_id': service_data['host'], '_deleted': False})
+                print("Found %d hosts" % hosts.count())
+                for host in hosts:
+                    print("Found soft deleted service host: %s/%s"
+                          % (host['name'], service['name']))
+                    # Search if the service is not yet existing as a soft deleted item
+                    services_drv = current_app.data.driver.db['service']
+                    service = services_drv.find_one({'name': service_data['name'],
+                                                     'host': service_data['host'],
+                                                     '_deleted': True})
+                    if service:
+                        # If so, restore the soft deleted item
+                        print("Restoring soft deleted service: %s/%s"
+                              % (host['name'], service['name']))
+                        lookup = {"_id": service['_id']}
+                        response, _, _, _ = patch_internal('service', payload=service_data,
+                                                           concurrency_check=False,
+                                                           skip_validation=False, **lookup)
+                        if response['_status'] == 'OK':
+                            print("Restored soft deleted service: %s/%s"
+                                  % (host['name'], service['name']))
+                # else:
+                #     hosts = hosts_drv.find_one({'_id': service_data['host']})
+                #     print("Found XXX host: %s" % hosts)
+                #     # for host in hosts:
+                #     #     print("Found host: %s" % host)
+            else:
+                Template.fill_template_service(service_data)
 
     @staticmethod
     def on_update_service(updates, original):
@@ -293,6 +343,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
                 del putdata['_etag']
                 del putdata['_updated']
                 del putdata['_created']
+                del putdata['_deleted']
                 response = put_internal('service', putdata, False, False, **lookup)
                 updates['_etag'] = response[0]['_etag']
                 original['_etag'] = response[0]['_etag']
@@ -647,6 +698,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
         del item['_id']
         del item['_created']
         del item['_updated']
+        del item['_deleted']
         if '_status' in item:
             del item['_status']
         if '_links' in item:

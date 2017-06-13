@@ -329,7 +329,6 @@ def pre_delete(resource, user_request, lookup):
         resources_delete_custom = g.get('resources_delete_custom', {})
         users_id = g.get('users_id', {})
 
-        print("delete: %s" % (resources_delete))
         if resource not in resources_delete and resource not in resources_delete_custom:
             abort(401, description='Not allowed to DELETE on this endpoint / resource.')
         else:
@@ -400,21 +399,31 @@ def pre_history_post(items):
     users_drv = current_app.data.driver.db['user']
     for dummy, item in enumerate(items):
         if 'host' in item and item['host']:
+            print("host item: %s" % item['host'])
+        else:
+            print("No host item")
+        host = None
+        if 'host' in item and item['host']:
             host = hosts_drv.find_one({'_id': item['host']})
             if host:
                 item['host_name'] = host['name']
             else:
+                print("Required host (%s) not found!" % item['host'])
                 continue
         elif 'host_name' in item and item['host_name']:
+            print("Required host (%s)" % item['host_name'])
             host = hosts_drv.find_one({'name': item['host_name']})
             if host:
+                print("Found required host %s (%s)" % (host['_id'], host['name']))
                 item['host'] = host['_id']
             else:
+                print("Required host (%s) not found!" % item['host_name'])
                 continue
         else:
             continue
 
-        host = hosts_drv.find_one({'_id': item['host']})
+        # host = hosts_drv.find_one({'_id': item['host']})
+        print("host item: %s" % item['host'])
         # Set _realm as host's _realm
         item['_realm'] = host['_realm']
         item['_sub_realm'] = host['_sub_realm']
@@ -424,20 +433,38 @@ def pre_history_post(items):
             service = services_drv.find_one({'_id': item['service']})
             if service:
                 item['service_name'] = service['name']
+                print("Required service %s (%s/%s)" % (service['_id'], item['host'], item['service_name']))
+            else:
+                print("Required service (%s) not found!" % (item['service']))
+                continue
         elif 'service_name' in item and item['service_name']:
+            services = services_drv.find({'name': item['service_name']})
+            for service in services:
+                print("Found service (%s/%s)" % (service['host'], service['name']))
+            print("Required service (%s/%s)" % (item['host'], item['service_name']))
             service = services_drv.find_one({'host': item['host'], 'name': item['service_name']})
             if service:
+                print("Found required service %s (%s/%s)" % (service['_id'], item['host'], service['name']))
                 item['service'] = service['_id']
+            else:
+                print("Required service (%s) not found!" % item['service_name'])
+                continue
 
         # Find user and user_name
         if 'user' in item and item['user']:
             user = users_drv.find_one({'_id': item['user']})
             if user:
                 item['user_name'] = user['name']
+            else:
+                print("Required user (%s) not found!" % item['user'])
+                continue
         elif 'user_name' in item and item['user_name']:
             user = users_drv.find_one({'name': item['user_name']})
             if user:
                 item['user'] = user['_id']
+            else:
+                print("Required user (%s) not found!" % item['user_name'])
+                continue
         else:
             item['user_name'] = 'Alignak'
             item['user'] = None
@@ -1173,6 +1200,34 @@ def after_delete_resource_realm():
     g.updateRealm = False
 
 
+# Hosts deletion
+def pre_delete_host(item):
+    """Hook before deleting an host.
+    Searches for the host services and deletes them
+
+    :param item: fields of the item / record
+    :type item: dict
+    :return: None
+    """
+    print("Deleting host: %s" % item['name'])
+    services_drv = current_app.data.driver.db['service']
+    services = services_drv.find({'host': item['_id']})
+    for service in services:
+        print("Deleting service: %s/%s" % (item['name'], service['name']))
+        lookup = {"_id": service['_id']}
+        deleteitem_internal('service', False, False, **lookup)
+
+
+def after_delete_host(item):
+    """Hook after host deletion. Update tree children of parent host
+
+    :param item: fields of the item / record
+    :type item: dict
+    :return: None
+    """
+    print("Deleted host: %s" % item['name'])
+
+
 # Alignak
 def pre_alignak_patch(updates, original):
     # pylint: disable=unused-argument
@@ -1188,7 +1243,8 @@ def pre_alignak_patch(updates, original):
     :return: None
     """
     for key in updates:
-        if key not in ['_updated', 'last_alive', 'last_command_check', 'last_log_rotation']:
+        if key not in ['_updated', '_deleted',
+                       'last_alive', 'last_command_check', 'last_log_rotation']:
             break
     else:
         # Only the running fields were updated, do not change _updated field
@@ -1197,8 +1253,7 @@ def pre_alignak_patch(updates, original):
 
 # Hosts/ services
 def pre_host_patch(updates, original):
-    """
-    Hook before updating an host element.
+    """Hook before updating an host element.
 
     When updating an host, if only the live state is updated, do not change the
     _updated field and compute the new host overall state..
@@ -1240,7 +1295,8 @@ def pre_host_patch(updates, original):
     :return: None
     """
     for key in updates:
-        if key not in ['_overall_state_id', '_updated', '_realm'] and not key.startswith('ls_'):
+        if key not in ['_overall_state_id', '_updated', '_deleted', '_realm'] and \
+                not key.startswith('ls_'):
             break
     else:
         # We updated the host live state, compute the new overall state, or
@@ -1361,7 +1417,8 @@ def pre_service_patch(updates, original):
     #     abort(make_response("Updating _overall_state_id for a service is forbidden", 412))
 
     for key in updates:
-        if key not in ['_overall_state_id', '_updated', '_realm'] and not key.startswith('ls_'):
+        if key not in ['_overall_state_id', '_updated', '_deleted', '_realm'] and \
+                not key.startswith('ls_'):
             break
     else:
         # pylint: disable=too-many-boolean-expressions
@@ -1519,7 +1576,7 @@ def pre_user_patch(updates, original):
         updates['password'] = generate_password_hash(updates['password'])
     if 'token' in updates:
         updates['token'] = generate_token()
-    # Special case, we don't want update _updated field when update ui_preferences field
+    # Special case, we don't want to update the _updated field when ui_preferences field is updated
     if len(updates) == 2 and 'ui_preferences' in updates:
         del updates['_updated']
 
@@ -1812,6 +1869,8 @@ app.on_post_POST_service += update_etag
 app.on_update_host += pre_host_patch
 app.on_update_service += pre_service_patch
 app.on_updated_service += after_updated_service
+app.on_delete_item_host += pre_delete_host
+app.on_deleted_item_host += after_delete_host
 app.on_delete_item_realm += pre_delete_realm
 app.on_deleted_item_realm += after_delete_realm
 app.on_deleted_resource_realm += after_delete_resource_realm
@@ -2210,7 +2269,8 @@ def cron_grafana(engine='jsonify'):
                 created = graf.create_dashboard(host)
                 if created:
                     print("[cron_grafana] created a dashboard for '%s'..." % host['name'])
-                    resp[grafana['name']]['created_dashboards'].append(host['name'])
+                    if host['name'] not in resp[grafana['name']]['created_dashboards']:
+                        resp[grafana['name']]['created_dashboards'].append(host['name'])
                 else:
                     print("[cron_grafana] dashboard creation failed for '%s'..." % host['name'])
 
