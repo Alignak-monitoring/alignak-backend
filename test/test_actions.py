@@ -91,9 +91,11 @@ class TestActions(unittest2.TestCase):
         data = json.loads(open('cfg/command_ping.json').read())
         data['_realm'] = cls.realm_all
         requests.post(cls.endpoint + '/command', json=data, headers=headers, auth=cls.auth)
-        response = requests.get(cls.endpoint + '/command', auth=cls.auth)
+        params = {'where': json.dumps({'name': 'ping'})}
+        response = requests.get(cls.endpoint + '/command', params=params, auth=cls.auth)
         resp = response.json()
         rc = resp['_items']
+        print("Command: %s" % rc[0]['name'])
 
         # Add an host
         data = json.loads(open('cfg/host_srv001.json').read())
@@ -101,11 +103,13 @@ class TestActions(unittest2.TestCase):
         if 'realm' in data:
             del data['realm']
         data['_realm'] = cls.realm_all
-        response = requests.post(cls.endpoint + '/host', json=data, headers=headers, auth=cls.auth)
-        resp = response.json()
-        response = requests.get(cls.endpoint + '/host', auth=cls.auth)
+        requests.post(cls.endpoint + '/host', json=data, headers=headers, auth=cls.auth)
+        params = {'where': json.dumps({'name': 'srv001'})}
+        response = requests.get(cls.endpoint + '/host', params=params, auth=cls.auth)
         resp = response.json()
         rh = resp['_items']
+        print("Hosts: %d items" % len(rh))
+        print("Host: %s (%s)" % (rh[0]['name'], rh[0]['_id']))
 
         # Add a service
         data = json.loads(open('cfg/service_srv001_ping.json').read())
@@ -113,6 +117,12 @@ class TestActions(unittest2.TestCase):
         data['check_command'] = rc[0]['_id']
         data['_realm'] = cls.realm_all
         requests.post(cls.endpoint + '/service', json=data, headers=headers, auth=cls.auth)
+        params = {'where': json.dumps({'name': 'ping', 'host': rh[0]['_id']})}
+        response = requests.get(cls.endpoint + '/service', params=params, auth=cls.auth)
+        resp = response.json()
+        rs = resp['_items']
+        print("Services: %d items" % len(rs))
+        print("Service: %s" % rs[0]['name'])
 
     @classmethod
     def tearDown(cls):
@@ -121,15 +131,15 @@ class TestActions(unittest2.TestCase):
 
         :return: None
         """
-        response = requests.get(cls.endpoint + '/host', auth=cls.auth)
-        resp = response.json()
-        for host in resp['_items']:
-            if host['name'] in ['srv001']:
-                headers = {'If-Match': host['_etag']}
-                response = requests.delete(cls.endpoint + '/host/' + host['_id'],
-                                           headers=headers, auth=cls.auth)
+        # response = requests.get(cls.endpoint + '/host', auth=cls.auth)
+        # resp = response.json()
+        # for host in resp['_items']:
+        #     if host['name'] in ['srv001']:
+        #         headers = {'If-Match': host['_etag']}
+        #         response = requests.delete(cls.endpoint + '/host/' + host['_id'],
+        #                                    headers=headers, auth=cls.auth)
 
-        for resource in ['service', 'command', 'history',
+        for resource in ['host', 'service', 'command', 'history',
                          'actionacknowledge', 'actiondowntime', 'actionforcecheck']:
             requests.delete(cls.endpoint + '/' + resource, auth=cls.auth)
 
@@ -1115,32 +1125,33 @@ class TestActions(unittest2.TestCase):
         headers = {'Content-Type': 'application/json'}
         sort_id = {'sort': '_id'}
 
-        # No existing forcechecks
-        response = requests.get(
-            self.endpoint + '/history', params=sort_id, auth=self.auth
-        )
+        # No existing history
+        response = requests.get(self.endpoint + '/history', params=sort_id, auth=self.auth)
         resp = response.json()
         re = resp['_items']
         self.assertEqual(len(re), 0)
 
         # Get hosts in the backend
-        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
+        params = {'where': json.dumps({'name': 'srv001'})}
+        response = requests.get(self.endpoint + '/host', params=params, auth=self.auth)
         resp = response.json()
         rh = resp['_items']
-        self.assertEqual(len(rh), 2)
-        self.assertEqual(rh[0]['name'], "_dummy")
-        self.assertEqual(rh[1]['name'], "srv001")
+        self.assertEqual(rh[0]['name'], "srv001")
+        print("Host 0: %s" % rh[0]['_id'])
 
         # Get service in the backend
-        response = requests.get(self.endpoint + '/service', auth=self.auth)
+        params = {'where': json.dumps({'name': 'ping', 'host': rh[0]['_id']})}
+        response = requests.get(self.endpoint + '/service', params=params, auth=self.auth)
         resp = response.json()
         rs = resp['_items']
         self.assertEqual(rs[0]['name'], "ping")
+        self.assertEqual(rs[0]['host'], rh[0]['_id'])
+        print("Service 0: %s" % rs[0]['_id'])
 
         # -------------------------------------------
-        # Add an history comment
+        # Add an history comment - host/service/user
         data = {
-            "host": rh[1]['_id'],
+            "host": rh[0]['_id'],
             "service": rs[0]['_id'],
             "user": self.user_admin_id,
             "type": "webui.comment",
@@ -1158,9 +1169,10 @@ class TestActions(unittest2.TestCase):
         resp = response.json()
         re = resp['_items']
         self.assertEqual(len(re), 1)
+        print("History 0: %s" % re[0])
 
-        self.assertEqual(re[0]['host'], rh[1]['_id'])
-        self.assertEqual(re[0]['host_name'], rh[1]['name'])
+        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[0]['name'])
         self.assertEqual(re[0]['service'], rs[0]['_id'])
         self.assertEqual(re[0]['service_name'], rs[0]['name'])
         self.assertEqual(re[0]['user'], self.user_admin_id)
@@ -1191,6 +1203,16 @@ class TestActions(unittest2.TestCase):
         self.assertEqual(len(re), 2)
         print("History 0: %s" % re[0])
         print("History 1: %s" % re[1])
+
+        self.assertEqual(re[0]['host'], rh[0]['_id'])
+        self.assertEqual(re[0]['host_name'], rh[0]['name'])
+        self.assertEqual(re[0]['service'], rs[0]['_id'])
+        self.assertEqual(re[0]['service_name'], rs[0]['name'])
+        self.assertEqual(re[0]['user'], self.user_admin_id)
+        self.assertEqual(re[0]['user_name'], 'admin')
+        self.assertEqual(re[0]['type'], "webui.comment")
+        self.assertEqual(re[0]['message'], "User comment")
+        self.assertEqual(re[0]['_realm'], self.realm_all)
 
         self.assertEqual(re[1]['host'], rh[0]['_id'])
         self.assertEqual(re[1]['host_name'], rh[0]['name'])

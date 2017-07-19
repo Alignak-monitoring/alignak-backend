@@ -258,11 +258,13 @@ class TestOverallState(unittest2.TestCase):
                 'Content-Type': 'application/json',
                 'If-Match': service['_etag']
             }
-            requests.patch(self.endpoint + '/service/' + service['_id'], json=data,
+            response = requests.patch(self.endpoint + '/service/' + service['_id'], json=data,
                            headers=headers_patch, auth=self.auth)
+            print(response.content)
             response = requests.get(
                 self.endpoint + '/service/' + service['_id'], params=sort_id, auth=self.auth
             )
+            print(response.content)
             ls_service = response.json()
             # On service insertion, _overall_state_id field is 3, because service is UNKNOWN
             self.assertEqual(0, ls_service['_overall_state_id'])

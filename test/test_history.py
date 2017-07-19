@@ -17,7 +17,7 @@ import requests
 import unittest2
 
 
-class TestActions(unittest2.TestCase):
+class TestHistory(unittest2.TestCase):
     """This class test history"""
 
     @classmethod
@@ -128,6 +128,88 @@ class TestActions(unittest2.TestCase):
         for resource in ['service', 'command', 'history',
                          'actionacknowledge', 'actiondowntime', 'actionforcecheck']:
             requests.delete(cls.endpoint + '/' + resource, auth=cls.auth)
+
+    def test_history_failures(self):
+        """Test history: add an item failure
+        :return: None
+        """
+        headers = {'Content-Type': 'application/json'}
+        sort_id = {'sort': '_id'}
+
+        # No existing history items
+        response = requests.get(
+            self.endpoint + '/history', params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        re = resp['_items']
+        self.assertEqual(len(re), 0)
+
+        # Get hosts in the backend
+        response = requests.get(self.endpoint + '/host', params={'sort': 'name'}, auth=self.auth)
+        resp = response.json()
+        rh = resp['_items']
+        self.assertEqual(len(rh), 2)
+        self.assertEqual(rh[0]['name'], "_dummy")
+        self.assertEqual(rh[1]['name'], "srv001")
+
+        # Get service in the backend
+        response = requests.get(self.endpoint + '/service', auth=self.auth)
+        resp = response.json()
+        rs = resp['_items']
+        self.assertEqual(rs[0]['name'], "ping")
+
+        # -------------------------------------------
+        # Add an history comment, host/service/user not found!
+        # Bad host
+        data = {
+            "host": rs[0]['_id'],
+            "service": rs[0]['_id'],
+            "user": self.user_admin,
+            "type": "webui.comment",
+            "message": "User comment",
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/history', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+        print(resp)
+        self.assertEqual(resp['_error']['code'], 422)
+        self.assertEqual(resp['_status'], 'ERR')
+
+        # Bad service
+        data = {
+            "host": rh[0]['_id'],
+            "service": rh[0]['_id'],
+            "user": self.user_admin,
+            "type": "webui.comment",
+            "message": "User comment",
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/history', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+        print(resp)
+        self.assertEqual(resp['_error']['code'], 422)
+        self.assertEqual(resp['_status'], 'ERR')
+
+        # Bad user
+        data = {
+            "host": rh[0]['_id'],
+            "service": rs[0]['_id'],
+            "user": rs[0]['_id'],
+            "type": "webui.comment",
+            "message": "User comment",
+            "_realm": self.realm_all
+        }
+        response = requests.post(
+            self.endpoint + '/history', json=data, headers=headers, auth=self.auth
+        )
+        resp = response.json()
+        print(resp)
+        self.assertEqual(resp['_error']['code'], 422)
+        self.assertEqual(resp['_status'], 'ERR')
 
     def test_history_comment(self):
         """Test history: add a comment

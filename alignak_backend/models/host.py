@@ -37,6 +37,7 @@ def get_schema():
     :rtype: dict
     """
     return {
+        'soft_delete': True,
         'schema': {
             # Importation source
             'imported_from': {
