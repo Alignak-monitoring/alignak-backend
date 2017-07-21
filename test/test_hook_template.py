@@ -110,6 +110,7 @@ class TestHookTemplate(unittest2.TestCase):
             del data['realm']
         data['_realm'] = self.realm_all
         data['_is_template'] = True
+        data['ls_state'] = 'UP'
         requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
         # Check if host right in backend
         response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
@@ -138,7 +139,7 @@ class TestHookTemplate(unittest2.TestCase):
                          '_template_fields', '_templates', '_is_template',
                          '_templates_with_services']
         for key in schema['schema']:
-            if key not in ignore_fields:
+            if key not in ignore_fields and not key.startswith('ls_'):
                 template_fields[key] = host_template_id
 
         self.assertItemsEqual(rh[2]['_template_fields'], template_fields)
