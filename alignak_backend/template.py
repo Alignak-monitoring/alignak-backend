@@ -12,7 +12,6 @@ from future.utils import iteritems
 from flask import current_app, g, abort, make_response
 from eve.methods.post import post_internal
 from eve.methods.patch import patch_internal
-from eve.methods.put import put_internal
 from eve.methods.delete import deleteitem_internal
 from bson.objectid import ObjectId
 from alignak_backend.models.host import get_schema as host_schema
@@ -351,20 +350,16 @@ class Template(object):  # pylint: disable=too-many-public-methods
             ignore_schema_fields = ['realm', '_template_fields', '_templates',
                                     '_is_template']
             template_fields = original['_template_fields']
-            do_put = False
+            do_patch = False
             for (field_name, _) in iteritems(updates):
                 if field_name not in ignore_schema_fields:
                     if field_name in template_fields:
                         del template_fields[field_name]
-                        do_put = True
-            if do_put:
+                        do_patch = True
+            if do_patch:
                 lookup = {"_id": original['_id']}
-                putdata = deepcopy(original)
-                putdata['_template_fields'] = template_fields
-                del putdata['_etag']
-                del putdata['_updated']
-                del putdata['_created']
-                response = put_internal('user', putdata, False, False, **lookup)
+                to_patch = {"_template_fields": template_fields}
+                response = patch_internal('user', to_patch, False, False, **lookup)
                 updates['_etag'] = response[0]['_etag']
                 original['_etag'] = response[0]['_etag']
 
