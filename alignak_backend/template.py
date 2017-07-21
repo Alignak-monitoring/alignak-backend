@@ -56,23 +56,19 @@ class Template(object):  # pylint: disable=too-many-public-methods
             return
         if not original['_is_template']:
             ignore_schema_fields = ['realm', '_template_fields', '_templates',
-                                    '_is_template',
+                                    '_is_template', '_overall_state_id',
                                     '_templates_with_services']
             template_fields = original['_template_fields']
-            do_put = False
+            do_patch = False
             for (field_name, _) in iteritems(updates):
-                if field_name not in ignore_schema_fields:
+                if field_name not in ignore_schema_fields and not field_name.startswith('ls_'):
                     if field_name in template_fields:
                         del template_fields[field_name]
-                        do_put = True
-            if do_put:
+                        do_patch = True
+            if do_patch:
                 lookup = {"_id": original['_id']}
-                putdata = deepcopy(original)
-                putdata['_template_fields'] = template_fields
-                del putdata['_etag']
-                del putdata['_updated']
-                del putdata['_created']
-                response = put_internal('host', putdata, False, False, **lookup)
+                to_patch = {"_template_fields": template_fields}
+                response = patch_internal('host', to_patch, False, False, **lookup)
                 updates['_etag'] = response[0]['_etag']
                 original['_etag'] = response[0]['_etag']
 
@@ -272,23 +268,19 @@ class Template(object):  # pylint: disable=too-many-public-methods
             return
         if not original['_is_template']:
             ignore_schema_fields = ['realm', '_template_fields', '_templates',
-                                    '_is_template',
+                                    '_is_template', '_overall_state_id',
                                     '_templates_from_host_template']
             template_fields = original['_template_fields']
-            do_put = False
+            do_patch = False
             for (field_name, _) in iteritems(updates):
-                if field_name not in ignore_schema_fields:
+                if field_name not in ignore_schema_fields and not field_name.startswith('ls_'):
                     if field_name in template_fields:
                         del template_fields[field_name]
-                        do_put = True
-            if do_put:
+                        do_patch = True
+            if do_patch:
                 lookup = {"_id": original['_id']}
-                putdata = deepcopy(original)
-                putdata['_template_fields'] = template_fields
-                del putdata['_etag']
-                del putdata['_updated']
-                del putdata['_created']
-                response = put_internal('service', putdata, False, False, **lookup)
+                to_patch = {"_template_fields": template_fields}
+                response = patch_internal('service', to_patch, False, False, **lookup)
                 updates['_etag'] = response[0]['_etag']
                 original['_etag'] = response[0]['_etag']
 
@@ -465,7 +457,8 @@ class Template(object):  # pylint: disable=too-many-public-methods
                 for (field_name, field_value) in iteritems(host):
                     if field_name not in not_updated_fields \
                             and field_name not in ignored_fields \
-                            and field_name not in cumulated_fields:
+                            and field_name not in cumulated_fields \
+                            and not field_name.startswith('ls_'):
                         item[field_name] = field_value
                         item['_template_fields'][field_name] = host_template
 
@@ -486,7 +479,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
             ignore_schema_fields = ['realm', '_template_fields', '_templates', '_is_template',
                                     '_templates_with_services']
             for key in schema['schema']:
-                if key not in ignore_schema_fields:
+                if key not in ignore_schema_fields and not key.startswith('ls_'):
                     if key not in item:
                         item['_template_fields'][key] = 0
 
@@ -560,7 +553,8 @@ class Template(object):  # pylint: disable=too-many-public-methods
                     for (field_name, field_value) in iteritems(service):
                         if field_name not in not_updated_fields \
                                 and field_name not in ignored_fields\
-                                and field_name not in cumulated_fields:
+                                and field_name not in cumulated_fields \
+                                and not field_name.startswith('ls_'):
                             item[field_name] = field_value
                             item['_template_fields'][field_name] = service_template
 
@@ -581,7 +575,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
             ignore_schema_fields = ['_realm', '_template_fields', '_templates', '_is_template',
                                     '_templates_from_host_template']
             for key in schema['schema']:
-                if key not in ignore_schema_fields:
+                if key not in ignore_schema_fields and not key.startswith('ls_'):
                     if key not in item:
                         item['_template_fields'][key] = 0
 
@@ -650,7 +644,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
         item['_templates_from_host_template'] = True
         item['_template_fields'] = {}
         for key in schema['schema']:
-            if item not in ignore_schema_fields:
+            if item not in ignore_schema_fields and not key.startswith('ls_'):
                 item['_template_fields'][key] = 0
         return item
 
@@ -709,7 +703,7 @@ class Template(object):  # pylint: disable=too-many-public-methods
             schema = user_schema()
             ignore_schema_fields = ['realm', '_template_fields', '_templates', '_is_template']
             for key in schema['schema']:
-                if key not in ignore_schema_fields:
+                if key not in ignore_schema_fields and not key.startswith('ls_'):
                     if key not in item:
                         item['_template_fields'][key] = 0
 
