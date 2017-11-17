@@ -1231,6 +1231,7 @@ def pre_alignak_patch(updates, original):
 
 # Hosts/ services
 def pre_host_patch(updates, original):
+    # pylint: disable=too-many-nested-blocks
     """
     Hook before updating an host element.
 
@@ -1263,6 +1264,7 @@ def pre_host_patch(updates, original):
         at least one of its services is WARNING
     - 4 if the host is DOWN or
         at least one of its services is CRITICAL
+    - 5 if the host is not monitored
 
     The _updated field is used by the Alignak arbiter to reload the configuration and we need to
     avoid reloading when the live state is updated.
@@ -1291,6 +1293,14 @@ def pre_host_patch(updates, original):
 
             overall_state = 0
 
+            active_checked = original['active_checks_enabled']
+            if 'ls_active_checked' in updates:
+                active_checked = updates['active_checks_enabled']
+
+            passive_checked = original['passive_checks_enabled']
+            if 'ls_passive_checked' in updates:
+                passive_checked = updates['passive_checks_enabled']
+
             acknowledged = original['ls_acknowledged']
             if 'ls_acknowledged' in updates:
                 acknowledged = updates['ls_acknowledged']
@@ -1314,12 +1324,15 @@ def pre_host_patch(updates, original):
                 elif state == 'DOWN':
                     overall_state = 4
 
-            if overall_state <= 2:
-                services_drv = current_app.data.driver.db['service']
-                services = services_drv.find({'host': original['_id']})
-                for service in services:
-                    if service['ls_state_type'] == 'HARD':
-                        overall_state = max(overall_state, service['_overall_state_id'])
+            if not active_checked and not passive_checked:
+                overall_state = 5
+            else:
+                if overall_state <= 2:
+                    services_drv = current_app.data.driver.db['service']
+                    services = services_drv.find({'host': original['_id']})
+                    for service in services:
+                        if service['ls_state_type'] == 'HARD':
+                            overall_state = max(overall_state, service['_overall_state_id'])
 
             # Get the host services overall states
             updates['_overall_state_id'] = overall_state
@@ -1340,12 +1353,16 @@ def after_insert_host(items):
     for dummy, item in enumerate(items):
         overall_state = 0
 
+        active_checked = item['active_checks_enabled']
+        passive_checked = item['passive_checks_enabled']
         acknowledged = item['ls_acknowledged']
         downtimed = item['ls_downtimed']
         state = item['ls_state']
         state = state.upper()
 
-        if acknowledged:
+        if not active_checked and not passive_checked:
+            overall_state = 5
+        elif acknowledged:
             overall_state = 1
         elif downtimed:
             overall_state = 2
@@ -1379,6 +1396,7 @@ def pre_service_patch(updates, original):
     - the downtime state
 
     The worst state is (prioritized):
+    - a service is not monitored (5)
     - a service critical or unreachable (4)
     - a service warning or unknown (3)
     - a service downtimed (2)
@@ -1411,6 +1429,14 @@ def pre_service_patch(updates, original):
             if 'ls_state' in updates or 'ls_acknowledged' in updates or 'ls_downtimed' in updates:
                 overall_state = 0
 
+                active_checked = original['active_checks_enabled']
+                if 'ls_active_checked' in updates:
+                    active_checked = updates['active_checks_enabled']
+
+                passive_checked = original['passive_checks_enabled']
+                if 'ls_passive_checked' in updates:
+                    passive_checked = updates['passive_checks_enabled']
+
                 acknowledged = original['ls_acknowledged']
                 if 'ls_acknowledged' in updates:
                     acknowledged = updates['ls_acknowledged']
@@ -1424,7 +1450,9 @@ def pre_service_patch(updates, original):
                     state = updates['ls_state']
                 state = state.upper()
 
-                if acknowledged:
+                if not active_checked and not passive_checked:
+                    overall_state = 5
+                elif acknowledged:
                     overall_state = 1
                 elif downtimed:
                     overall_state = 2
@@ -1456,12 +1484,16 @@ def after_insert_service(items):
     for dummy, item in enumerate(items):
         overall_state = 0
 
+        active_checked = item['active_checks_enabled']
+        passive_checked = item['passive_checks_enabled']
         acknowledged = item['ls_acknowledged']
         downtimed = item['ls_downtimed']
         state = item['ls_state']
         state = state.upper()
 
-        if acknowledged:
+        if not active_checked and not passive_checked:
+            overall_state = 5
+        elif acknowledged:
             overall_state = 1
         elif downtimed:
             overall_state = 2
@@ -2077,8 +2109,8 @@ with app.test_request_context():
     app.on_inserted_service += Livesynthesis.on_inserted_service
     app.on_updated_host += Livesynthesis.on_updated_host
     app.on_updated_service += Livesynthesis.on_updated_service
-    app.on_deleted_item_host += Livesynthesis.on_deleted_item_host
-    app.on_deleted_item_service += Livesynthesis.on_deleted_item_service
+    app.on_deleted_item_host += Livesynthesis.on_deleted_host
+    app.on_deleted_item_service += Livesynthesis.on_deleted_service
     app.on_deleted_resource_host += Livesynthesis.on_deleted_resource_host
     app.on_deleted_resource_host += Livesynthesis.on_deleted_resource_service
     app.on_fetched_item_livesynthesis += Livesynthesis.on_fetched_item_history

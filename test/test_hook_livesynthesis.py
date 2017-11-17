@@ -14,6 +14,9 @@ import requests
 import unittest2
 from alignak_backend.livesynthesis import Livesynthesis
 
+# Set an environment variable to print debug information for the backend
+os.environ['ALIGNAK_BACKEND_PRINT'] = '1'
+
 
 class TestHookLivesynthesis(unittest2.TestCase):
     """
@@ -114,6 +117,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -123,6 +127,64 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 0)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 0)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 0)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+    def test_add_host_not_monitored(self):
+        """
+        Test livesynthesis when adding a not monitored host
+
+        :return: None
+        """
+        headers = {'Content-Type': 'application/json'}
+        sort_id = {'sort': '_id'}
+        # Add command
+        data = json.loads(open('cfg/command_ping.json').read())
+        data['_realm'] = self.realm_all
+        requests.post(self.endpoint + '/command', json=data, headers=headers, auth=self.auth)
+        # Check if command right in backend
+        response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
+        resp = response.json()
+        self.assertEqual(len(resp['_items']), 3)
+        rc = resp['_items']
+
+        data = json.loads(open('cfg/host_srv001.json').read())
+        data['check_command'] = rc[2]['_id']
+        if 'realm' in data:
+            del data['realm']
+        # Not monitored !
+        data['active_checks_enabled'] = False
+        data['passive_checks_enabled'] = False
+        data['_realm'] = self.realm_all
+        requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
+        # Check if livesynthesis right created
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 0)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -209,6 +271,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -218,6 +281,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 0)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -225,6 +289,76 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_critical_hard'], 0)
         self.assertEqual(r[0]['services_critical_soft'], 0)
         self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+    def test_add_service_not_monitored(self):
+        """
+        Test livesynthesis when add a service
+
+        :return: None
+        """
+        headers = {'Content-Type': 'application/json'}
+        sort_id = {'sort': '_id'}
+        # Add command
+        data = json.loads(open('cfg/command_ping.json').read())
+        data['_realm'] = self.realm_all
+        requests.post(self.endpoint + '/command', json=data, headers=headers, auth=self.auth)
+        # Check if command right in backend
+        response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
+        resp = response.json()
+        self.assertEqual(len(resp['_items']), 3)
+        rc = resp['_items']
+
+        # add host
+        data = json.loads(open('cfg/host_srv001.json').read())
+        data['check_command'] = rc[2]['_id']
+        if 'realm' in data:
+            del data['realm']
+        data['_realm'] = self.realm_all
+        requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        self.assertEqual(len(resp['_items']), 2)
+        rh = resp['_items']
+
+        # Add service
+        data = json.loads(open('cfg/service_srv001_ping.json').read())
+        data['host'] = rh[1]['_id']
+        data['check_command'] = rc[2]['_id']
+        data['_realm'] = self.realm_all
+        # Not monitored !
+        data['active_checks_enabled'] = False
+        data['passive_checks_enabled'] = False
+        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+
+        # Check if livesynthesis right created
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 1)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 1)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 0)
         self.assertEqual(r[0]['services_unknown_soft'], 0)
         self.assertEqual(r[0]['services_unreachable_hard'], 0)
         self.assertEqual(r[0]['services_unreachable_soft'], 0)
@@ -281,6 +415,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -290,6 +425,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 0)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -719,6 +855,508 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['services_acknowledged'], 0)
         self.assertEqual(r[0]['services_in_downtime'], 0)
 
+    def test_update_host_not_monitored(self):
+        """
+        Test livesynthesis when updating live state of a not monitored host
+
+        :return: None
+        """
+        headers = {'Content-Type': 'application/json'}
+        sort_id = {'sort': '_id'}
+        # Add command
+        data = json.loads(open('cfg/command_ping.json').read())
+        data['_realm'] = self.realm_all
+        requests.post(self.endpoint + '/command', json=data, headers=headers, auth=self.auth)
+        # Check if command right in backend
+        response = requests.get(self.endpoint + '/command', params=sort_id, auth=self.auth)
+        resp = response.json()
+        self.assertEqual(len(resp['_items']), 3)
+        rc = resp['_items']
+
+        # Add host
+        data = json.loads(open('cfg/host_srv001.json').read())
+        data['check_command'] = rc[2]['_id']
+        if 'realm' in data:
+            del data['realm']
+        data['_realm'] = self.realm_all
+        # Not monitored !
+        data['active_checks_enabled'] = False
+        data['passive_checks_enabled'] = False
+        requests.post(self.endpoint + '/host', json=data, headers=headers, auth=self.auth)
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        self.assertEqual(len(resp['_items']), 2)
+        rh = resp['_items']
+
+        # Add service
+        data = json.loads(open('cfg/service_srv001_ping.json').read())
+        data['host'] = rh[1]['_id']
+        data['check_command'] = rc[2]['_id']
+        data['_realm'] = self.realm_all
+        requests.post(self.endpoint + '/service', json=data, headers=headers, auth=self.auth)
+
+        # Get host
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        ls_host = copy.copy(r[1])
+        updated_field = ls_host['_updated']
+
+        # Get initial live synthesis
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+        # Update something else than the live state for an host
+        time.sleep(1)
+        data = {
+            'alias': 'Updated alias',
+        }
+        headers_patch = {
+            'Content-Type': 'application/json',
+            'If-Match': ls_host['_etag']
+        }
+        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                       headers=headers_patch, auth=self.auth)
+        response = requests.get(
+            self.endpoint + '/host/' + ls_host['_id'], params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        ls_host = resp
+        # _updated field must have changed...
+        self.assertNotEqual(updated_field, ls_host['_updated'])
+        updated_field = ls_host['_updated']
+
+        # Update live state for an host
+        # => DOWN SOFT
+        time.sleep(.1)
+        data = {
+            'ls_state': 'DOWN',
+            'ls_state_id': 1,
+            'ls_state_type': 'SOFT',
+            'ls_last_check': 1465685852,
+            'ls_last_state': 'UP',
+            'ls_last_state_type': 'HARD',
+            'ls_output': 'CRITICAL - Plugin timed out after 10 seconds',
+            'ls_long_output': '',
+            'ls_perf_data': '',
+            'ls_acknowledged': False,
+            'ls_execution_time': 10.0598139763,
+            'ls_latency': 1.3571469784
+        }
+        headers_patch = {
+            'Content-Type': 'application/json',
+            'If-Match': ls_host['_etag']
+        }
+        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                       headers=headers_patch, auth=self.auth)
+        response = requests.get(
+            self.endpoint + '/host/' + ls_host['_id'], params=sort_id, auth=self.auth
+        )
+        resp = response.json()
+        ls_host = resp
+        # _updated field did not changed...
+        self.assertEqual(updated_field, ls_host['_updated'])
+
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+        # => DOWN HARD
+        time.sleep(.1)
+        data = {
+            'ls_state': 'DOWN',
+            'ls_state_id': 1,
+            'ls_state_type': 'HARD',
+            'ls_last_check': 1465685913,
+            'ls_last_state': 'DOWN',
+            'ls_last_state_type': 'SOFT',
+            'ls_output': 'CRITICAL - Plugin timed out after 10 seconds',
+            'ls_long_output': '',
+            'ls_perf_data': '',
+            'ls_acknowledged': False,
+            'ls_execution_time': 10.0842711926,
+            'ls_latency': 2.0673139095
+        }
+        headers_patch = {
+            'Content-Type': 'application/json',
+            'If-Match': ls_host['_etag']
+        }
+        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                       headers=headers_patch, auth=self.auth)
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        ls_host = copy.copy(r[1])
+        # _updated field did not changed...
+        self.assertEqual(updated_field, ls_host['_updated'])
+
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+        # => last_(state|state_type) are changed
+        time.sleep(.1)
+        data = {
+            'ls_state': 'DOWN',
+            'ls_state_id': 1,
+            'ls_state_type': 'HARD',
+            'ls_last_check': 1465685971,
+            'ls_last_state': 'DOWN',
+            'ls_last_state_type': 'HARD',
+            'ls_output': 'CRITICAL - Plugin timed out after 10 seconds',
+            'ls_long_output': '',
+            'ls_perf_data': '',
+            'ls_acknowledged': False,
+            'ls_execution_time': 10.1046719551,
+            'ls_latency': 0.926582098
+        }
+        headers_patch = {
+            'Content-Type': 'application/json',
+            'If-Match': ls_host['_etag']
+        }
+        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                       headers=headers_patch, auth=self.auth)
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        ls_host = copy.copy(r[1])
+        # _updated field did not changed...
+        self.assertEqual(updated_field, ls_host['_updated'])
+
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+        # we acknowledge the host
+        time.sleep(.1)
+        data = {
+            'ls_state': 'DOWN',
+            'ls_state_id': 1,
+            'ls_state_type': 'HARD',
+            'ls_last_check': 1465686371,
+            'ls_last_state': 'DOWN',
+            'ls_last_state_type': 'HARD',
+            'ls_output': 'CRITICAL - Plugin timed out after 10 seconds',
+            'ls_long_output': '',
+            'ls_perf_data': '',
+            'ls_acknowledged': True,
+            'ls_execution_time': 10.1046719551,
+            'ls_latency': 0.926582098
+        }
+        headers_patch = {
+            'Content-Type': 'application/json',
+            'If-Match': ls_host['_etag']
+        }
+        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                       headers=headers_patch, auth=self.auth)
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        ls_host = copy.copy(r[1])
+        # _updated field did not changed...
+        self.assertEqual(updated_field, ls_host['_updated'])
+
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+        # remove acknowledge
+        time.sleep(.1)
+        data = {
+            'ls_state': 'DOWN',
+            'ls_state_id': 1,
+            'ls_state_type': 'HARD',
+            'ls_last_check': 1465686371,
+            'ls_last_state': 'DOWN',
+            'ls_last_state_type': 'HARD',
+            'ls_output': 'CRITICAL - Plugin timed out after 10 seconds',
+            'ls_long_output': '',
+            'ls_perf_data': '',
+            'ls_acknowledged': False,
+            'ls_execution_time': 10.1046719551,
+            'ls_latency': 0.926582098
+        }
+        headers_patch = {
+            'Content-Type': 'application/json',
+            'If-Match': ls_host['_etag']
+        }
+        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                       headers=headers_patch, auth=self.auth)
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        ls_host = copy.copy(r[1])
+        # _updated field did not changed...
+        self.assertEqual(updated_field, ls_host['_updated'])
+
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+        # we downtime the host
+        time.sleep(.1)
+        data = {
+            'ls_state': 'DOWN',
+            'ls_state_id': 1,
+            'ls_state_type': 'HARD',
+            'ls_last_check': 1465686371,
+            'ls_last_state': 'DOWN',
+            'ls_last_state_type': 'HARD',
+            'ls_output': 'CRITICAL - Plugin timed out after 10 seconds',
+            'ls_long_output': '',
+            'ls_perf_data': '',
+            'ls_acknowledged': False,
+            'ls_downtimed': True,
+            'ls_execution_time': 10.1046719551,
+            'ls_latency': 0.926582098
+        }
+        headers_patch = {
+            'Content-Type': 'application/json',
+            'If-Match': ls_host['_etag']
+        }
+        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                       headers=headers_patch, auth=self.auth)
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        ls_host = copy.copy(r[1])
+        # _updated field did not changed...
+        self.assertEqual(updated_field, ls_host['_updated'])
+
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
+        # remove downtime
+        time.sleep(.1)
+        data = {
+            'ls_state': 'DOWN',
+            'ls_state_id': 1,
+            'ls_state_type': 'HARD',
+            'ls_last_check': 1465686371,
+            'ls_last_state': 'DOWN',
+            'ls_last_state_type': 'HARD',
+            'ls_output': 'CRITICAL - Plugin timed out after 10 seconds',
+            'ls_long_output': '',
+            'ls_perf_data': '',
+            'ls_acknowledged': False,
+            'ls_downtimed': False,
+            'ls_execution_time': 10.1046719551,
+            'ls_latency': 0.926582098
+        }
+        headers_patch = {
+            'Content-Type': 'application/json',
+            'If-Match': ls_host['_etag']
+        }
+        requests.patch(self.endpoint + '/host/' + ls_host['_id'], json=data,
+                       headers=headers_patch, auth=self.auth)
+        response = requests.get(self.endpoint + '/host', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        ls_host = copy.copy(r[1])
+        # _updated field did not changed...
+        self.assertEqual(updated_field, ls_host['_updated'])
+
+        response = requests.get(self.endpoint + '/livesynthesis', params=sort_id, auth=self.auth)
+        resp = response.json()
+        r = resp['_items']
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 1)
+        self.assertEqual(r[0]['hosts_up_hard'], 0)
+        self.assertEqual(r[0]['hosts_up_soft'], 0)
+        self.assertEqual(r[0]['hosts_down_hard'], 0)
+        self.assertEqual(r[0]['hosts_down_soft'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r[0]['hosts_acknowledged'], 0)
+        self.assertEqual(r[0]['hosts_in_downtime'], 0)
+        self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_ok_hard'], 0)
+        self.assertEqual(r[0]['services_ok_soft'], 0)
+        self.assertEqual(r[0]['services_warning_hard'], 0)
+        self.assertEqual(r[0]['services_warning_soft'], 0)
+        self.assertEqual(r[0]['services_critical_hard'], 0)
+        self.assertEqual(r[0]['services_critical_soft'], 0)
+        self.assertEqual(r[0]['services_unknown_hard'], 1)
+        self.assertEqual(r[0]['services_unknown_soft'], 0)
+        self.assertEqual(r[0]['services_unreachable_hard'], 0)
+        self.assertEqual(r[0]['services_unreachable_soft'], 0)
+        self.assertEqual(r[0]['services_acknowledged'], 0)
+        self.assertEqual(r[0]['services_in_downtime'], 0)
+
     def test_update_service(self):
         """
         Test livesynthesis when updating live state of a service
@@ -770,6 +1408,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -778,6 +1417,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_unreachable_soft'], 0)
         self.assertEqual(r[0]['hosts_acknowledged'], 0)
         self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -1368,6 +2008,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[2]['_realm'], realmAll_B_id)
         for index in range(0, 3):
             self.assertEqual(r[index]['hosts_total'], 1)
+            self.assertEqual(r[index]['hosts_not_monitored'], 0)
             self.assertEqual(r[index]['hosts_up_hard'], 0)
             self.assertEqual(r[index]['hosts_up_soft'], 0)
             self.assertEqual(r[index]['hosts_down_hard'], 0)
@@ -1376,6 +2017,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
             self.assertEqual(r[index]['hosts_unreachable_soft'], 0)
             self.assertEqual(r[index]['hosts_acknowledged'], 0)
             self.assertEqual(r[index]['services_total'], 1)
+            self.assertEqual(r[index]['services_not_monitored'], 0)
             self.assertEqual(r[index]['services_ok_hard'], 0)
             self.assertEqual(r[index]['services_ok_soft'], 0)
             self.assertEqual(r[index]['services_warning_hard'], 0)
@@ -1434,6 +2076,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         for ls in r:
             if ls['_realm'] == realmAll_A_id:
                 self.assertEqual(ls['hosts_total'], 1)
+                self.assertEqual(ls['hosts_not_monitored'], 0)
                 self.assertEqual(ls['hosts_up_hard'], 0)
                 self.assertEqual(ls['hosts_up_soft'], 0)
                 self.assertEqual(ls['hosts_down_hard'], 0)
@@ -1442,6 +2085,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
                 self.assertEqual(ls['hosts_unreachable_soft'], 0)
                 self.assertEqual(ls['hosts_acknowledged'], 0)
                 self.assertEqual(ls['services_total'], 1)
+                self.assertEqual(ls['services_not_monitored'], 0)
                 self.assertEqual(ls['services_ok_hard'], 0)
                 self.assertEqual(ls['services_ok_soft'], 0)
                 self.assertEqual(ls['services_warning_hard'], 0)
@@ -1454,6 +2098,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
                 self.assertEqual(ls['services_unreachable_soft'], 0)
             else:
                 self.assertEqual(ls['hosts_total'], 1)
+                self.assertEqual(ls['hosts_not_monitored'], 0)
                 self.assertEqual(ls['hosts_up_hard'], 0)
                 self.assertEqual(ls['hosts_up_soft'], 0)
                 self.assertEqual(ls['hosts_down_hard'], 0)
@@ -1462,6 +2107,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
                 self.assertEqual(ls['hosts_unreachable_soft'], 0)
                 self.assertEqual(ls['hosts_acknowledged'], 0)
                 self.assertEqual(ls['services_total'], 1)
+                self.assertEqual(ls['services_not_monitored'], 0)
                 self.assertEqual(ls['services_ok_hard'], 0)
                 self.assertEqual(ls['services_ok_soft'], 0)
                 self.assertEqual(ls['services_warning_hard'], 0)
@@ -1542,6 +2188,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -1551,6 +2198,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 1)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -1597,6 +2245,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -1606,6 +2255,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 1)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -1643,6 +2293,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 1)
@@ -1652,6 +2303,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 0)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -1699,6 +2351,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -1708,6 +2361,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 1)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -1745,6 +2399,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -1754,6 +2409,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 1)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 1)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -1801,6 +2457,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -1821,6 +2478,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 2)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -1843,6 +2501,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 1)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -2064,6 +2723,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 2)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -2073,6 +2733,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 0)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 8)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -2120,6 +2781,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 2)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -2129,6 +2791,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 0)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 6)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
@@ -2168,6 +2831,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         r = resp['_items']
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0]['hosts_total'], 2)
+        self.assertEqual(r[0]['hosts_not_monitored'], 0)
         self.assertEqual(r[0]['hosts_up_hard'], 0)
         self.assertEqual(r[0]['hosts_up_soft'], 0)
         self.assertEqual(r[0]['hosts_down_hard'], 0)
@@ -2177,6 +2841,7 @@ class TestHookLivesynthesis(unittest2.TestCase):
         self.assertEqual(r[0]['hosts_acknowledged'], 0)
         self.assertEqual(r[0]['hosts_in_downtime'], 0)
         self.assertEqual(r[0]['services_total'], 8)
+        self.assertEqual(r[0]['services_not_monitored'], 0)
         self.assertEqual(r[0]['services_ok_hard'], 0)
         self.assertEqual(r[0]['services_ok_soft'], 0)
         self.assertEqual(r[0]['services_warning_hard'], 0)
