@@ -292,14 +292,16 @@ class Livesynthesis(object):
             return
 
         minus, plus = Livesynthesis.livesynthesis_to_update('hosts', updated, original)
-        if minus:
+        if minus is not False:
             livesynthesis_db = current_app.data.driver.db['livesynthesis']
             live_current = livesynthesis_db.find_one({'_realm': original['_realm']})
             if live_current is None or 'not_monitored' in minus or 'not_monitored' in plus:
                 ls = Livesynthesis()
                 ls.recalculate()
             else:
-                data = {"$inc": {minus: -1, plus: 1}}
+                data = {"$inc": {minus: -1}}
+                if plus is not False:
+                    data = {"$inc": {minus: -1, plus: 1}}
                 if 'ALIGNAK_BACKEND_PRINT' in os.environ:
                     print("LS - updated host %s: %s..." % (original['name'], data))
                 current_app.data.driver.db.livesynthesis.update({'_id': live_current['_id']}, data)
@@ -322,14 +324,18 @@ class Livesynthesis(object):
             return
 
         minus, plus = Livesynthesis.livesynthesis_to_update('services', updated, original)
-        if minus:
+        if minus is not False:
             livesynthesis_db = current_app.data.driver.db['livesynthesis']
             live_current = livesynthesis_db.find_one({'_realm': original['_realm']})
-            if live_current is None or 'not_monitored' in minus or 'not_monitored' in plus:
+            if live_current is None \
+                    or (not isinstance(minus, bool) and 'not_monitored' in minus) \
+                    or (not isinstance(plus, bool) and 'not_monitored' in plus):
                 ls = Livesynthesis()
                 ls.recalculate()
             else:
-                data = {"$inc": {minus: -1, plus: 1}}
+                data = {"$inc": {minus: -1}}
+                if plus is not False:
+                    data = {"$inc": {minus: -1, plus: 1}}
                 if 'ALIGNAK_BACKEND_PRINT' in os.environ:
                     print("LS - updated service %s: %s..." % (original['name'], data))
                 current_app.data.driver.db.livesynthesis.update({'_id': live_current['_id']}, data)
