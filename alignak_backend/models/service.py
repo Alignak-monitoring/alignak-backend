@@ -40,7 +40,7 @@ def get_schema():
         'schema': {
             'schema_version': {
                 'type': 'integer',
-                'default': 1,
+                'default': 2,
             },
             # Importation source
             'imported_from': {
@@ -818,13 +818,6 @@ def get_schema():
                 'type': 'boolean',
                 'default': False
             },
-            'ls_impact': {
-                'schema_version': 1,
-                'title': 'Impact',
-                'comment': 'Is an impact?',
-                'type': 'boolean',
-                'default': False
-            },
             'ls_last_check': {
                 'schema_version': 1,
                 'title': 'Last check time',
@@ -855,6 +848,8 @@ def get_schema():
                 'type': 'integer',
                 'default': 0
             },
+
+            # Not in the service LCR
             'ls_next_check': {
                 'schema_version': 1,
                 'title': 'Next check',
@@ -922,16 +917,14 @@ def get_schema():
                 'default': False
             },
 
-            # todo - Attempt number - difference with ls_current_attemp?
-            'ls_attempt': {
-                'schema_version': 1,
-                'title': 'Current attempt number',
-                'comment': '',
+            # Last time state changed
+            'ls_state_changed': {
+                'schema_version': 2,
+                'title': 'Last time state changed',
+                'comment': 'Last time this element state has changed.',
                 'type': 'integer',
                 'default': 0
             },
-
-            # Last time hard state changed
             'ls_last_hard_state_changed': {
                 'schema_version': 1,
                 'title': 'Last time hard state changed',
@@ -1103,5 +1096,20 @@ def get_schema():
                 'default': []
             }
         },
-        'schema_deleted': {}
+        'schema_deleted': {
+            'ls_impact': {
+                'schema_version': 1,
+                'title': 'Impact',
+                'comment': 'Is an impact?',
+                'type': 'boolean',
+                'default': False
+            },
+            'ls_attempt': {
+                'schema_version': 1,
+                'title': 'Current attempt number',
+                'comment': '',
+                'type': 'integer',
+                'default': 0
+            }
+        }
     }

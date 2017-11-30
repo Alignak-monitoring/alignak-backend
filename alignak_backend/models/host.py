@@ -40,7 +40,7 @@ def get_schema():
         'schema': {
             'schema_version': {
                 'type': 'integer',
-                'default': 1,
+                'default': 2,
             },
             # Importation source
             'imported_from': {
@@ -803,13 +803,6 @@ def get_schema():
                 'type': 'boolean',
                 'default': False
             },
-            'ls_impact': {
-                'schema_version': 1,
-                'title': 'Impact',
-                'comment': 'Is an impact?',
-                'type': 'boolean',
-                'default': False
-            },
             'ls_last_check': {
                 'schema_version': 1,
                 'title': 'Check timestamp',
@@ -833,13 +826,8 @@ def get_schema():
                 'default': 'HARD',
                 'allowed': ['HARD', 'SOFT']
             },
-            'ls_last_state_changed': {
-                'schema_version': 1,
-                'title': 'Last state changed',
-                'comment': 'Last state changed timestamp',
-                'type': 'integer',
-                'default': 0
-            },
+
+            # Not in the host LCR
             'ls_next_check': {
                 'schema_version': 1,
                 'title': 'Next check',
@@ -907,16 +895,21 @@ def get_schema():
                 'default': False
             },
 
-            # todo - Attempt number - difference with ls_current_attemp?
-            'ls_attempt': {
-                'schema_version': 1,
-                'title': 'Current attempt number',
-                'comment': '',
+            # Last time state changed
+            'ls_state_changed': {
+                'schema_version': 2,
+                'title': 'State changed',
+                'comment': 'The state has changed with the last check?',
                 'type': 'integer',
                 'default': 0
             },
-
-            # Last time hard state changed
+            'ls_last_state_changed': {
+                'schema_version': 1,
+                'title': 'Last state changed',
+                'comment': 'Last state changed timestamp',
+                'type': 'integer',
+                'default': 0
+            },
             'ls_last_hard_state_changed': {
                 'schema_version': 1,
                 'title': 'Last time hard state changed',
@@ -926,6 +919,7 @@ def get_schema():
             },
 
             # Last time in the corresponding state
+            # Not in the host LCR
             'ls_last_time_up': {
                 'schema_version': 1,
                 'title': 'Last time up',
@@ -1083,5 +1077,20 @@ def get_schema():
                 'default': []
             },
         },
-        'schema_deleted': {}
+        'schema_deleted': {
+            'ls_impact': {
+                'schema_version': 1,
+                'title': 'Impact',
+                'comment': 'Is an impact?',
+                'type': 'boolean',
+                'default': False
+            },
+            'ls_attempt': {
+                'schema_version': 1,
+                'title': 'Current attempt number',
+                'comment': '',
+                'type': 'integer',
+                'default': 0
+            },
+        },
     }

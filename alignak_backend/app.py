@@ -335,7 +335,6 @@ def pre_delete(resource, user_request, lookup):
         resources_delete_custom = g.get('resources_delete_custom', {})
         users_id = g.get('users_id', {})
 
-        print("delete: %s" % (resources_delete))
         if resource not in resources_delete and resource not in resources_delete_custom:
             abort(401, description='Not allowed to DELETE on this endpoint / resource.')
         else:
@@ -452,7 +451,7 @@ def pre_history_post(items):
 # Log checks results
 def pre_logcheckresult_post(items):
     """
-    Hook before adding new forcecheck
+    Hook before adding new logcheckresult
 
     :param items: logcheckresult fields
     :type items: dict
@@ -461,17 +460,40 @@ def pre_logcheckresult_post(items):
     hosts_drv = current_app.data.driver.db['host']
     services_drv = current_app.data.driver.db['service']
     for dummy, item in enumerate(items):
-        # Set _realm as host's _realm
-        host = hosts_drv.find_one({'_id': item['host']})
-        item['_realm'] = host['_realm']
-        item['host_name'] = host['name']
+        if 'ALIGNAK_BACKEND_PRINT' in os.environ:
+            print("LCR - got a check result: %s" % item)
 
-        # Find service_name
-        if item['service'] and 'service_name' not in item:
-            service = services_drv.find_one({'_id': item['service']})
-            item['service_name'] = service['name']
+        if not item.get('host') and not item.get('host_name'):
+            abort(make_response("Posting LCR without host information is not accepted.", 412))
+
+        # Find the concerned host
+        if not item.get('host'):
+            host = hosts_drv.find_one({'name': item['host_name']})
+            item['host'] = host['_id']
         else:
+            host = hosts_drv.find_one({'_id': item['host']})
+            item['host_name'] = host['name']
+
+        if not item.get('service') and not item.get('service_name'):
+            # This is valid for an host check result
+            item['service'] = None
             item['service_name'] = ''
+        else:
+            # We got a service check result
+            if item.get('service_name') and not item.get('service'):
+                service = services_drv.find_one(
+                    {'host': item['host'], 'name': item['service_name']})
+                item['service'] = service['_id']
+
+            if item.get('service') and not item.get('service_name'):
+                service = services_drv.find_one({'_id': item['service']})
+                item['service_name'] = service['name']
+
+        # Set _realm as host's _realm
+        item['_realm'] = host['_realm']
+
+        if 'ALIGNAK_BACKEND_PRINT' in os.environ:
+            print("LCR - inserting an LCR for %s/%s..." % (item['host_name'], item['service_name']))
 
 
 def after_insert_logcheckresult(items):
@@ -483,7 +505,78 @@ def after_insert_logcheckresult(items):
     :return: None
     """
     for dummy, item in enumerate(items):
-        # Create an history event for the new forcecheck
+        if 'ALIGNAK_BACKEND_PRINT' in os.environ:
+            print("LCR - inserted an LCR for %s/%s..." % (item['host_name'], item['service_name']))
+            print("    -> %s..." % item)
+        # # Update the livestate...
+        if item['service']:
+            # ...for a service
+            lookup = {"_id": item['service']}
+            data = {
+                'ls_state': item['state'],
+                'ls_state_type': item['state_type'],
+                'ls_state_id': item['state_id'],
+                'ls_acknowledged': item['acknowledged'],
+                'ls_acknowledgement_type': item['acknowledgement_type'],
+                'ls_downtimed': item['downtimed'],
+                'ls_last_check': item['last_check'],
+                'ls_last_state': item['last_state'],
+                'ls_last_state_type': item['last_state_type'],
+                'ls_output': item['output'],
+                'ls_long_output': item['long_output'],
+                'ls_perf_data': item['perf_data'],
+                'ls_current_attempt': item['current_attempt'],
+                'ls_max_attempts': item['max_attempts'],
+                'ls_latency': item['latency'],
+                'ls_execution_time': item['execution_time'],
+                'ls_passive_check': item['passive_check'],
+                'ls_state_changed': item['state_changed'],
+                'ls_last_state_changed': item['last_state_changed'],
+                'ls_last_hard_state_changed': item['last_hard_state_changed'],
+                'ls_last_time_ok': item['last_time_0'],
+                'ls_last_time_warning': item['last_time_1'],
+                'ls_last_time_critical': item['last_time_2'],
+                'ls_last_time_unknown': item['last_time_3'],
+                'ls_last_time_unreachable': item['last_time_4']
+            }
+            (pi_a, pi_b, pi_c, pi_d) = patch_internal('service', data, False, False, **lookup)
+            if 'ALIGNAK_BACKEND_PRINT' in os.environ:
+                print("LCR - internal patch result: %s, %s, %s, %s" % (pi_a, pi_b, pi_c, pi_d))
+        else:
+            # ...for an host
+            lookup = {"_id": item['host']}
+            data = {
+                'ls_state': item['state'],
+                'ls_state_type': item['state_type'],
+                'ls_state_id': item['state_id'],
+                'ls_acknowledged': item['acknowledged'],
+                'ls_acknowledgement_type': item['acknowledgement_type'],
+                'ls_downtimed': item['downtimed'],
+                'ls_last_check': item['last_check'],
+                'ls_last_state': item['last_state'],
+                'ls_last_state_type': item['last_state_type'],
+                'ls_output': item['output'],
+                'ls_long_output': item['long_output'],
+                'ls_perf_data': item['perf_data'],
+                'ls_current_attempt': item['current_attempt'],
+                'ls_max_attempts': item['max_attempts'],
+                'ls_latency': item['latency'],
+                'ls_execution_time': item['execution_time'],
+                'ls_passive_check': item['passive_check'],
+                'ls_state_changed': item['state_changed'],
+                'ls_last_state_changed': item['last_state_changed'],
+                'ls_last_hard_state_changed': item['last_hard_state_changed'],
+                'ls_last_time_up': item['last_time_0'],
+                'ls_last_time_down': item['last_time_1'],
+                # 'ls_last_time_2': item['last_time_2'],
+                # 'ls_last_time_3': item['last_time_3'],
+                'ls_last_time_unreachable': item['last_time_4']
+            }
+            (pi_a, pi_b, pi_c, pi_d) = patch_internal('host', data, False, False, **lookup)
+            if 'ALIGNAK_BACKEND_PRINT' in os.environ:
+                print("LCR - internal patch result: %s, %s, %s, %s" % (pi_a, pi_b, pi_c, pi_d))
+
+        # Create an history event for the new logcheckresult
         message = "%s[%s] (%s/%s): %s" % (item['state'], item['state_type'],
                                           item['acknowledged'], item['downtimed'],
                                           item['output'])
@@ -500,6 +593,7 @@ def after_insert_logcheckresult(items):
         post_internal("history", data, True)
 
 
+# Actions
 def pre_post_action_right(actrequestp):
     """Deny post on action* endpoint if the logged-in user do not have can_submit_commands
 
@@ -1188,7 +1282,8 @@ def pre_delete_host(item):
     :type item: dict
     :return: None
     """
-    print("Deleting host: %s" % item['name'])
+    if 'ALIGNAK_BACKEND_PRINT' in os.environ:
+        print("Deleting host: %s" % item['name'])
     services_drv = current_app.data.driver.db['service']
     services = services_drv.find({'host': item['_id']})
     for service in services:
@@ -1204,7 +1299,8 @@ def after_delete_host(item):
     :type item: dict
     :return: None
     """
-    print("Deleted host: %s" % item['name'])
+    if 'ALIGNAK_BACKEND_PRINT' in os.environ:
+        print("Deleted host: %s" % item['name'])
 
 
 # Alignak

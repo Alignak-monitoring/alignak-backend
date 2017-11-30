@@ -40,17 +40,18 @@ def get_schema():
         'schema': {
             'schema_version': {
                 'type': 'integer',
-                'default': 1,
+                'default': 2,
             },
             'host': {
-                'schema_version': 1,
-                'title': 'Concerned host',
+                'schema_version': 2,
+                'title': 'Concerned host identifier',
                 'type': 'objectid',
                 'data_relation': {
                     'resource': 'host',
                     'embeddable': True
                 },
-                'required': True,
+                # 'required': True,
+                'nullable': True
             },
             'host_name': {
                 'schema_version': 1,
@@ -62,15 +63,15 @@ def get_schema():
                 'regex': '^[^`~!$%^&*"|\'<>?,()=]+$'
             },
             'service': {
-                'schema_version': 1,
-                'title': 'Concerned service',
+                'schema_version': 2,
+                'title': 'Concerned service identifier',
                 'comment': 'If not set, this check result is an host check',
                 'type': 'objectid',
                 'data_relation': {
                     'resource': 'service',
                     'embeddable': True
                 },
-                'required': True,
+                # 'required': True,
                 'nullable': True
             },
             'service_name': {
@@ -152,18 +153,6 @@ def get_schema():
                 'type': 'integer',
                 'default': 0
             },
-            'last_state_changed': {
-                'schema_version': 1,
-                'title': 'Last state changed',
-                'type': 'integer',
-                'default': 0
-            },
-            'state_changed': {
-                'schema_version': 1,
-                'title': 'State changed',
-                'type': 'boolean',
-                'default': False
-            },
             'output': {
                 'schema_version': 1,
                 'title': 'Output',
@@ -193,6 +182,81 @@ def get_schema():
                 'title': 'Execution time',
                 'type': 'float',
                 'default': 0.0
+            },
+
+            'current_attempt': {
+                'schema_version': 2,
+                'title': 'Current attempt number',
+                'comment': '',
+                'type': 'integer',
+                'default': 0
+            },
+            'max_attempts': {
+                'schema_version': 2,
+                'title': 'Maximum attempts',
+                'comment': '',
+                'type': 'integer',
+                'default': 0
+            },
+
+            # Last time hard state changed
+            'state_changed': {
+                'schema_version': 1,
+                'title': 'State changed',
+                'comment': 'The state has changed with the last check?',
+                'type': 'boolean',
+                'default': False
+            },
+            'last_state_changed': {
+                'schema_version': 1,
+                'title': 'Last state changed',
+                'comment': 'Last time the state changed',
+                'type': 'integer',
+                'default': 0
+            },
+            'last_hard_state_changed': {
+                'schema_version': 2,
+                'title': 'Last time hard state changed',
+                'comment': 'Last time this element hard state has changed.',
+                'type': 'integer',
+                'default': 0
+            },
+
+            # Last time in the corresponding state_id
+            'last_time_0': {
+                'schema_version': 2,
+                'title': 'Last time up/ok',
+                'comment': 'Last time this element was Up/Ok.',
+                'type': 'integer',
+                'default': 0
+            },
+            'last_time_1': {
+                'schema_version': 2,
+                'title': 'Last time Down/Warning',
+                'comment': 'Last time this element was Down/Warning.',
+                'type': 'integer',
+                'default': 0
+            },
+            'last_time_2': {
+                'schema_version': 2,
+                'title': 'Last time critical',
+                'comment': 'Last time this element was Critical.',
+                'type': 'integer',
+                'default': 0
+            },
+            'last_time_3': {
+                'schema_version': 2,
+                'title': 'Last time unknown',
+                'comment': 'Last time this element was Unknown.',
+                'type': 'integer',
+                'default': 0
+            },
+            'last_time_4': {
+                'schema_version': 2,
+                'title': 'Last time unreachable',
+                'comment': 'Last time this element was Unreachable.',
+                'type': 'integer',
+                'default': 0
             },
 
             # Realm
