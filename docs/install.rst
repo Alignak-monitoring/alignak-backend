@@ -282,15 +282,21 @@ It is recommended to install a log rotation because the Alignak backend log may 
    }
 
 
+Install on FreeBSD Unix
+-----------------------
+
+There is no âckage available currentmy for FreeBSD. You can install with pip as explained hereunder.
+
 Install with pip
 ----------------
 
 .. note:: the recommended way for installing on a production server is mostly often to use the packages existing for your distribution. Thanks to recent ``pip`` integration and to the strong *requirements.txt* shipped with the Alignak backend, installing with pip is a reliable installation mode.
 
 The pip installation provides:
-- a startup script using an uwsgi server,
-- for FreeBSD users, an rc.d sample script
-- for systemd based systems (Debian, CentOS), an alignak-backend service unit example.
+
+   - a startup script using an uwsgi server,
+   - for FreeBSD users, an rc.d sample script
+   - for systemd based systems (Debian, CentOS), an alignak-backend service unit example.
 
 All this stuff is available in the */usr/local/share/alignak-backend* directory::
 
@@ -314,6 +320,10 @@ Installation with ``pip``::
       Add your own user account as a member of alignak group to run daemons from your shell!
       Created.
 
+Configure Linux systemd services
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::
+
    # Set-up system services
    $ sudo cp /usr/local/share/alignak-backend/bin/systemd/alignak-backend.service /lib/systemd/system
    # Note that if you are using default Python 2 as default interpreter, you must edit the service file
@@ -329,9 +339,8 @@ Installation with ``pip``::
 
    $ sudo systemctl start alignak-backend
 
-
-For freeBSD system service
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Configure freeBSD system service
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ::
 
     # Enable the system service
@@ -356,6 +365,7 @@ For freeBSD system service
     service alignak-backend stop
     service alignak-backend start
 
+
 From source
 ~~~~~~~~~~~
 
@@ -363,7 +373,7 @@ You can install it from source::
 
     git clone https://github.com/Alignak-monitoring-contrib/alignak-backend
     cd alignak-backend
-    pip install .
+    sudo pip install .
 
 You can then apply the same procedures as when instalilng with pip to prepare your system.
 

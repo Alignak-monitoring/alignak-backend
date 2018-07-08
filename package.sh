@@ -80,47 +80,50 @@ pkg_team="Alignak Team (contact@alignak.net)"
 version=`python -c "from alignak_backend import __version__;print(__version__)"`
 version_date=`date "+%Y-%m-%d"`
 
+mkdir -p dist
+cp .bintray-${output_type}.json dist/.bintray-${output_type}.json
+
 if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
-   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_desc\"|\"Stable version\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Stable version\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
 
    # Stable repo
    if [ "${output_type}" = "deb" ]; then
-      sed -i -e "s/sed_version_repo/alignak-deb-stable/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-deb-stable/g" dist/.bintray-${output_type}.json
    else
-      sed -i -e "s/sed_version_repo/alignak-rpm-stable/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-rpm-stable/g" dist/.bintray-${output_type}.json
    fi
 elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
-   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_desc\"|\"Development version\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Development version\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
 
    # Testing repo
    if [ "${output_type}" = "deb" ]; then
-      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" dist/.bintray-${output_type}.json
    else
-      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" dist/.bintray-${output_type}.json
    fi
 
    # Version
    version="${version}-dev"
 else
    # Updating deploy script for any other branch / tag
-   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"$1\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_desc\"|\"Branch $1 version\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"$1\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Branch $1 version\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
 
    # Testing repo
    if [ "${output_type}" = "deb" ]; then
-      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" dist/.bintray-${output_type}.json
    else
-      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" dist/.bintray-${output_type}.json
    fi
 
    # Version
@@ -130,7 +133,7 @@ fi
 echo "----------"
 echo "BinTray configuration file:"
 echo "----------"
-cat .bintray-${output_type}.json
+cat dist/.bintray-${output_type}.json
 echo "----------"
 
 # Run fpm:

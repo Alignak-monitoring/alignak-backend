@@ -71,7 +71,7 @@ jobs:
       deploy:
       - provider: bintray
         skip_cleanup: true
-        file: .bintray-deb.json
+        file: dist/.bintray-deb.json
         user: mohierf
         key:
           secure: "5/FpinKL/2wywHpMiFKc0y4rhFfMugHjtz7MLI5HJwdTdhVMciwU/nNQnUQMYBsdIuB/dEz1oDxHXpjNRAN5MQrlkM4e3hWMnKwRbIFEo9ZAnkBLW7cFukoGG0FmysmaL++ALaCTgKct347/gWlljuqWDMaOqRuF2GBgVHsNvtfuxNc0Jn3inVRrSDhn4/Q9oHVH+967uFwycdbjWSYbQfKubZE393DsVCuBJ2Bk9mDarbyIEclLb20ZN9vIw/ZUaKlWcEorf5Dw0/YIbvQW74Nh8JlfSUIurIc8Bd6usqcWd+v5SnwpdYKkK1Z588JIif11nOL1915S1A+fVl2qwrvL42QO34lEcAdjkMKXRVaw5k6ARXCDjAY6Cm0+ANtwxB9pzvljfgiVOJEJbZaq38grEJ3tQKh/xwTROcry3hgkRMnaYPF28+Oc+l+2PpF1FBHLP4ATD4WlX1jrwND3hGMPYdk2ODAgP+52sxr+AQtfvovb84e9j3Mz3T26blZvZ2f3YTgy8LKssxOP1H0h6XUGbweVQe+lje9l4ZrryXAPfTFc+6Q/2qbC1cmaPYkccfkF4ef/LCt4rw4aii7rXdqQdcBtr6dPIMlxyKMjUimNrQcQ0NXVCdDA3wUUdSHGESsLJeb0fnxWuabUFzyfTs+YSoIrEVDVKTxq9ADY1ak="
@@ -94,7 +94,7 @@ jobs:
       deploy:
       - provider: bintray
         skip_cleanup: true
-        file: .bintray-rpm.json
+        file: dist/.bintray-rpm.json
         user: mohierf
         key:
           secure: "5/FpinKL/2wywHpMiFKc0y4rhFfMugHjtz7MLI5HJwdTdhVMciwU/nNQnUQMYBsdIuB/dEz1oDxHXpjNRAN5MQrlkM4e3hWMnKwRbIFEo9ZAnkBLW7cFukoGG0FmysmaL++ALaCTgKct347/gWlljuqWDMaOqRuF2GBgVHsNvtfuxNc0Jn3inVRrSDhn4/Q9oHVH+967uFwycdbjWSYbQfKubZE393DsVCuBJ2Bk9mDarbyIEclLb20ZN9vIw/ZUaKlWcEorf5Dw0/YIbvQW74Nh8JlfSUIurIc8Bd6usqcWd+v5SnwpdYKkK1Z588JIif11nOL1915S1A+fVl2qwrvL42QO34lEcAdjkMKXRVaw5k6ARXCDjAY6Cm0+ANtwxB9pzvljfgiVOJEJbZaq38grEJ3tQKh/xwTROcry3hgkRMnaYPF28+Oc+l+2PpF1FBHLP4ATD4WlX1jrwND3hGMPYdk2ODAgP+52sxr+AQtfvovb84e9j3Mz3T26blZvZ2f3YTgy8LKssxOP1H0h6XUGbweVQe+lje9l4ZrryXAPfTFc+6Q/2qbC1cmaPYkccfkF4ef/LCt4rw4aii7rXdqQdcBtr6dPIMlxyKMjUimNrQcQ0NXVCdDA3wUUdSHGESsLJeb0fnxWuabUFzyfTs+YSoIrEVDVKTxq9ADY1ak="
@@ -117,7 +117,7 @@ jobs:
       deploy:
       - provider: bintray
         skip_cleanup: true
-        file: .bintray-rpm.json
+        file: dist/.bintray-rpm.json
         user: mohierf
         key:
           secure: "5/FpinKL/2wywHpMiFKc0y4rhFfMugHjtz7MLI5HJwdTdhVMciwU/nNQnUQMYBsdIuB/dEz1oDxHXpjNRAN5MQrlkM4e3hWMnKwRbIFEo9ZAnkBLW7cFukoGG0FmysmaL++ALaCTgKct347/gWlljuqWDMaOqRuF2GBgVHsNvtfuxNc0Jn3inVRrSDhn4/Q9oHVH+967uFwycdbjWSYbQfKubZE393DsVCuBJ2Bk9mDarbyIEclLb20ZN9vIw/ZUaKlWcEorf5Dw0/YIbvQW74Nh8JlfSUIurIc8Bd6usqcWd+v5SnwpdYKkK1Z588JIif11nOL1915S1A+fVl2qwrvL42QO34lEcAdjkMKXRVaw5k6ARXCDjAY6Cm0+ANtwxB9pzvljfgiVOJEJbZaq38grEJ3tQKh/xwTROcry3hgkRMnaYPF28+Oc+l+2PpF1FBHLP4ATD4WlX1jrwND3hGMPYdk2ODAgP+52sxr+AQtfvovb84e9j3Mz3T26blZvZ2f3YTgy8LKssxOP1H0h6XUGbweVQe+lje9l4ZrryXAPfTFc+6Q/2qbC1cmaPYkccfkF4ef/LCt4rw4aii7rXdqQdcBtr6dPIMlxyKMjUimNrQcQ0NXVCdDA3wUUdSHGESsLJeb0fnxWuabUFzyfTs+YSoIrEVDVKTxq9ADY1ak="
