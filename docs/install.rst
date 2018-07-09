@@ -95,6 +95,23 @@ An excerpt for installing MongoDB on an Ubuntu Xenial::
     sudo systemctl start mongod.service
 
 
+An excerpt for installing MongoDB on CentOS 7::
+
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
+    sudo vi /etc/yum.repos.d/mongodb-org-3.6.repo
+         [mongodb-org-3.6]
+         name=MongoDB Repository
+         baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/3.6/x86_64/
+         gpgcheck=1
+         enabled=1
+         gpgkey=https://www.mongodb.org/static/pgp/server-3.6.asc
+
+    sudo yum update
+    sudo yum install -y mongodb-org
+    sudo systemctl enable mongod.service
+    sudo systemctl start mongod.service
+
+
 Configuring MongoDB is not mandatory because the Alignak backend do not require any authenticated connection to the database. But if you wish a more secure DB access with user authentication, you must configure MongoDB::
 
    mongo
@@ -195,6 +212,9 @@ As an example on Debian (for python 3)::
 
 As an example on CentOS (for python 2)::
 
+   # Il faut les dépôts EPEL !
+   sudo yum install epel-release
+
    sudo yum install uwsgi uwsgi-plugin-python
 
 .. warning:: If you get some errors with the plugins, you will need to set some options in the alignak backend */usr/local/etc/alignak-backend/uwsgi.ini* configuration file. See this configuration file commented accordingly.
@@ -282,10 +302,132 @@ It is recommended to install a log rotation because the Alignak backend log may 
    }
 
 
+Install on RHEL-like Linux
+--------------------------
+
+Installing Alignak backend for an RPM based Linux distribution (eg. RHEL, CentOS, etc.) is using ``rpm`` packages and it is the recommended way. You can find packages in the Alignak dedicated repositories.
+
+To proceed with installation, you must register the alignak repositories on your system.
+
+Create the file */etc/yum.repos.d/alignak-stable.repo* with the following content::
+
+   [Alignak-rpm-stable]
+   name=Alignak RPM stable packages
+   baseurl=https://dl.bintray.com/alignak/alignak-rpm-stable
+   gpgcheck=0
+   repo_gpgcheck=0
+   enabled=1
+
+And then update the repositories list::
+
+   sudo yum repolist
+
+
+If you wish to use the non-stable versions (eg. current develop or any other specific branch), you can also create a repository source for the test versions. Then create a file */etc/yum.repos.d/alignak-testing.repo* with the following content::
+
+   [Alignak-rpm-testing]
+   name=Alignak RPM testing packages
+   baseurl=https://dl.bintray.com/alignak/alignak-rpm-testing
+   gpgcheck=0
+   repo_gpgcheck=0
+   enabled=1
+
+The Alignak packages repositories contain several version of the application. The versioning scheme is the same as the Alignak one.
+
+
+
+Once the download sources are set, you can simply use the standard package tool to have more information about Alignak packages and available versions.
+ ::
+
+   yum search alignak
+   # Note that it exists some Alignak packages in the EPEL repository but it is an old version. Contact us for more information...
+      Loaded plugins: fastestmirror
+      Loading mirror speeds from cached hostfile
+       * base: mirrors.atosworldline.com
+       * epel: mirror.speedpartner.de
+       * extras: mirrors.atosworldline.com
+       * updates: mirrors.standaloneinstaller.com
+      =========================================================================== N/S matched: alignak ===========================================================================
+      alignak.noarch : Alignak, modern Nagios compatible monitoring framework
+      alignak-all.noarch : Meta-package to pull in all alignak
+      alignak-arbiter.noarch : Alignak Arbiter
+      alignak-broker.noarch : Alignak Broker
+      alignak-common.noarch : Alignak Common
+      alignak-poller.noarch : Alignak Poller
+      alignak-reactionner.noarch : Alignak Reactionner
+      alignak-receiver.noarch : Alignak Poller
+      alignak-scheduler.noarch : Alignak Scheduler
+
+        Name and summary matches only, use "search all" for everything.
+
+   yum info alignak
+      Loaded plugins: fastestmirror
+      Loading mirror speeds from cached hostfile
+       * base: mirrors.atosworldline.com
+       * epel: mirror.speedpartner.de
+       * extras: mirrors.atosworldline.com
+       * updates: mirrors.standaloneinstaller.com
+      Available Packages
+      Name        : alignak
+      Arch        : noarch
+      Version     : 1.1.0rc5_test
+      Release     : 1
+      Size        : 816 k
+      Repo        : alignak-testing
+      Summary     : Alignak, modern Nagios compatible monitoring framework
+      URL         : http://alignak.net
+      License     : AGPL
+      Description : Alignak, modern Nagios compatible monitoring framework
+
+
+Or you can simply use the standard package tool to install Alignak and its dependencies.
+ ::
+
+   sudo yum install alignak
+
+   # Check Alignak installation
+   # It copied the default shipped files and sample configuration.
+   ll /usr/local/share/alignak/
+      total 8
+      drwxr-xr-x. 5 root root   49 May 24 17:52 bin
+      drwxr-xr-x. 6 root root  144 May 24 17:52 etc
+      -rwxrwxr-x. 1 root root 2179 Jun 22  2018 post-install.sh
+      -rw-rw-r--. 1 root root 1889 Jun 22  2018 requirements.txt
+
+Contrary to the debian installer, no post-installation script is started nor system services are installed. You must then::
+
+   sudo /usr/local/share/alignak/post-install.sh
+
+This will install the Alignak required Python packages. This script is copied during the installation in the default installation directory: */usr/local/share/alignak*. It is using the Python pip tool to get the Python packages listed in the default installation directory *requirements.txt* file.
+
+.. note:: as stated :ref:`formerly in this document <Installation/requirements>`, this hack is necessary to be sure that we use the expected versions of the needed Python libraries...
+
+To terminate the installation of the system services you must::
+
+   sudo cp /usr/local/share/alignak/bin/systemd/alignak* /lib/systemd/system
+
+   ll /lib/systemd/system
+      -rw-r--r--. 1 root root  777 May 24 17:48 /lib/systemd/system/alignak-arbiter@.service
+      -rw-r--r--. 1 root root  770 May 24 17:48 /lib/systemd/system/alignak-broker@.service
+      -rw-r--r--. 1 root root  770 May 24 17:48 /lib/systemd/system/alignak-poller@.service
+      -rw-r--r--. 1 root root  805 May 24 17:48 /lib/systemd/system/alignak-reactionner@.service
+      -rw-r--r--. 1 root root  784 May 24 17:48 /lib/systemd/system/alignak-receiver@.service
+      -rw-r--r--. 1 root root  791 May 24 17:48 /lib/systemd/system/alignak-scheduler@.service
+      -rw-r--r--. 1 root root 1286 May 24 17:48 /lib/systemd/system/alignak.service
+
+   sudo systemctl enable alignak
+      Created symlink from /etc/systemd/system/multi-user.target.wants/alignak.service to /usr/lib/systemd/system/alignak.service.
+
+.. note:: more information about the default shipped configuration is available :ref: `on this page <configuration/default_configuration>`.
+
+
+Once you achieved this tricky part, running Alignak daemons is easy. All you need is to inform the Alignak daemons where they will find the configuration to use and start the `alignak` system service. All this is explained :ref:`in this chapter <run_alignak/services_systemd>`.
+
+
 Install on FreeBSD Unix
 -----------------------
 
-There is no âckage available currentmy for FreeBSD. You can install with pip as explained hereunder.
+There is no package available currentmy for FreeBSD. You can install with pip as explained hereunder.
 
 Install with pip
 ----------------

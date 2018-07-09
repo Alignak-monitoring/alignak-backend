@@ -48,12 +48,11 @@ jobs:
       - provider: pypi
         distributions: "sdist bdist_wheel"
         skip_existing: true
+        on:
+          tags: true
         user: alignak
         password:
           secure: "YRRx7Yp7tB/fe+Ymya8MmfGB2c7VrOqDNXv0JXh8+xd5nZQQ/cvWWynWL1b0KFAmYGCosLz5LrNJUcKObK93Hvx5/wfN4U6jTppy89pGGlpbwd+OM7PHjeEYCS6G/7MyalBJcHEhsVBLO+xfr6nyu2xCneUeMjXb83+WyQHLEZDhrb9vPLBUXbQVd32FkZzertbovUKWGhYOzJoFPZ3MehzQiRAGqwx7mDJwfZdolrwzfbWsE0wGkHPCthxveHPHAiSNX60MrZi+kPvPUMAnYCTWPOoSbjVXIofVWQ4N2FU8MNDnC2SIg3g711N0WE45UhSqbqCKd/WpydEb26OpbAmxA/aKsoUmkyUjx4qJuI/cVLkZAAPdtZDmAPOgxiok/MohJa0HgJVkWpkhfRoCwUyD8svziMvJxbA/1Ijq9SrMQGOERjx37JLweF7dM34Yo5wI4pi/A/kDt2bp4dIXFf4t5tjbm74sNKiNlRkMl0oi62hnBR0TWX5BdauRu6BE6pyx1dGgFJg7lYqRXnIOACSTsK/nezkE/6D6N05R701CJ+50ej9TiPFUWBzNXAIj6WjQduPVIq08iV60qrFDUb35ZQuOQFk7jjWZihXiVyAQr70maMb97xLwH/ar06w8meI76Vktsm7PnuozjnkQWCxH3mXrfpEDOSM0QxNJOBc="
-        on:
-          branch: develop
-          tags: true
     - stage: Debian packaging
       python: 3.6
       install:
@@ -64,20 +63,20 @@ jobs:
       script:
         - echo "Deploying to BinTray packages..."
         # Package Alignak-backend for deb/rpm
-        - mkdir -p dist
         - ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb
         # Not yet available
         # ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
+      if: (branch IN (master, develop)) OR (tags IS present)
       deploy:
       - provider: bintray
         skip_cleanup: true
         file: dist/.bintray-deb.json
+        on:
+          all_branches: true
+          tags: true
         user: mohierf
         key:
           secure: "5/FpinKL/2wywHpMiFKc0y4rhFfMugHjtz7MLI5HJwdTdhVMciwU/nNQnUQMYBsdIuB/dEz1oDxHXpjNRAN5MQrlkM4e3hWMnKwRbIFEo9ZAnkBLW7cFukoGG0FmysmaL++ALaCTgKct347/gWlljuqWDMaOqRuF2GBgVHsNvtfuxNc0Jn3inVRrSDhn4/Q9oHVH+967uFwycdbjWSYbQfKubZE393DsVCuBJ2Bk9mDarbyIEclLb20ZN9vIw/ZUaKlWcEorf5Dw0/YIbvQW74Nh8JlfSUIurIc8Bd6usqcWd+v5SnwpdYKkK1Z588JIif11nOL1915S1A+fVl2qwrvL42QO34lEcAdjkMKXRVaw5k6ARXCDjAY6Cm0+ANtwxB9pzvljfgiVOJEJbZaq38grEJ3tQKh/xwTROcry3hgkRMnaYPF28+Oc+l+2PpF1FBHLP4ATD4WlX1jrwND3hGMPYdk2ODAgP+52sxr+AQtfvovb84e9j3Mz3T26blZvZ2f3YTgy8LKssxOP1H0h6XUGbweVQe+lje9l4ZrryXAPfTFc+6Q/2qbC1cmaPYkccfkF4ef/LCt4rw4aii7rXdqQdcBtr6dPIMlxyKMjUimNrQcQ0NXVCdDA3wUUdSHGESsLJeb0fnxWuabUFzyfTs+YSoIrEVDVKTxq9ADY1ak="
-        on:
-          branch: develop
-          tags: true
     - stage: RPM packaging for Python 2
       python: 2.7
       install:
@@ -89,12 +88,15 @@ jobs:
       script:
         - echo "Deploying to BinTray packages..."
         # Package Alignak-backend for deb/rpm
-        - mkdir -p dist
         - ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm
+      if: (branch IN (master, develop)) OR (tags IS present)
       deploy:
       - provider: bintray
         skip_cleanup: true
         file: dist/.bintray-rpm.json
+        on:
+          all_branches: true
+          tags: true
         user: mohierf
         key:
           secure: "5/FpinKL/2wywHpMiFKc0y4rhFfMugHjtz7MLI5HJwdTdhVMciwU/nNQnUQMYBsdIuB/dEz1oDxHXpjNRAN5MQrlkM4e3hWMnKwRbIFEo9ZAnkBLW7cFukoGG0FmysmaL++ALaCTgKct347/gWlljuqWDMaOqRuF2GBgVHsNvtfuxNc0Jn3inVRrSDhn4/Q9oHVH+967uFwycdbjWSYbQfKubZE393DsVCuBJ2Bk9mDarbyIEclLb20ZN9vIw/ZUaKlWcEorf5Dw0/YIbvQW74Nh8JlfSUIurIc8Bd6usqcWd+v5SnwpdYKkK1Z588JIif11nOL1915S1A+fVl2qwrvL42QO34lEcAdjkMKXRVaw5k6ARXCDjAY6Cm0+ANtwxB9pzvljfgiVOJEJbZaq38grEJ3tQKh/xwTROcry3hgkRMnaYPF28+Oc+l+2PpF1FBHLP4ATD4WlX1jrwND3hGMPYdk2ODAgP+52sxr+AQtfvovb84e9j3Mz3T26blZvZ2f3YTgy8LKssxOP1H0h6XUGbweVQe+lje9l4ZrryXAPfTFc+6Q/2qbC1cmaPYkccfkF4ef/LCt4rw4aii7rXdqQdcBtr6dPIMlxyKMjUimNrQcQ0NXVCdDA3wUUdSHGESsLJeb0fnxWuabUFzyfTs+YSoIrEVDVKTxq9ADY1ak="
@@ -112,15 +114,15 @@ jobs:
       script:
         - echo "Deploying to BinTray packages..."
         # Package Alignak-backend for deb/rpm
-        - mkdir -p dist
         - ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm
+      if: (branch IN (master, develop)) OR (tags IS present)
       deploy:
       - provider: bintray
         skip_cleanup: true
         file: dist/.bintray-rpm.json
+        on:
+          all_branches: true
+          tags: true
         user: mohierf
         key:
           secure: "5/FpinKL/2wywHpMiFKc0y4rhFfMugHjtz7MLI5HJwdTdhVMciwU/nNQnUQMYBsdIuB/dEz1oDxHXpjNRAN5MQrlkM4e3hWMnKwRbIFEo9ZAnkBLW7cFukoGG0FmysmaL++ALaCTgKct347/gWlljuqWDMaOqRuF2GBgVHsNvtfuxNc0Jn3inVRrSDhn4/Q9oHVH+967uFwycdbjWSYbQfKubZE393DsVCuBJ2Bk9mDarbyIEclLb20ZN9vIw/ZUaKlWcEorf5Dw0/YIbvQW74Nh8JlfSUIurIc8Bd6usqcWd+v5SnwpdYKkK1Z588JIif11nOL1915S1A+fVl2qwrvL42QO34lEcAdjkMKXRVaw5k6ARXCDjAY6Cm0+ANtwxB9pzvljfgiVOJEJbZaq38grEJ3tQKh/xwTROcry3hgkRMnaYPF28+Oc+l+2PpF1FBHLP4ATD4WlX1jrwND3hGMPYdk2ODAgP+52sxr+AQtfvovb84e9j3Mz3T26blZvZ2f3YTgy8LKssxOP1H0h6XUGbweVQe+lje9l4ZrryXAPfTFc+6Q/2qbC1cmaPYkccfkF4ef/LCt4rw4aii7rXdqQdcBtr6dPIMlxyKMjUimNrQcQ0NXVCdDA3wUUdSHGESsLJeb0fnxWuabUFzyfTs+YSoIrEVDVKTxq9ADY1ak="
-        on:
-          branch: develop
-          tags: true
